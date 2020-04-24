@@ -1,0 +1,27 @@
+[app]
+name = "afiqo location"
+version = "0.0.1"
+host = "localhost"
+port = 8000
+environment = "development"
+shutdown_timeout = 10
+read_timeout = 60
+write_timeout = 60
+
+[database]
+host = "localhost"
+port = 26257
+name = "afiqo_location"
+username = "root"
+password = ""
+sslmode = "disable"
+
+[cache]
+host = "localhost"
+port = 6379
+password = ""
+max_idle = 100
+idle_timeout = 5
+enabled = true
+expire_time = 30
+active_event_lister = true
