@@ -146,7 +146,7 @@ func (s *CategoryModel) Insert(ctx context.Context, db *sql.DB) error {
 			created_by,
 			created_at)
 		VALUES(
-		$1,$2,$3,$4,$5,now())
+		$1,$2,$3,now())
 		RETURNING id, created_at,is_delete`)
 
 	err := db.QueryRowContext(ctx, query,

@@ -92,6 +92,17 @@ func InitHandlers() *mux.Router {
 	apiV1.Handle("/categories/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerCategoryDelete), session.ADMIN_ROLE))).Methods(http.MethodDelete)
 
+	apiV1.Handle("/products", middleware.SessionMiddleware(
+		HandlerFunc(HandlerProductList))).Methods(http.MethodGet)
+	apiV1.Handle("/products/{id}", middleware.SessionMiddleware(
+		HandlerFunc(HandlerProductDetail))).Methods(http.MethodGet)
+	apiV1.Handle("/products", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerProductAdd), session.SUPPLIER_ROLE))).Methods(http.MethodPost)
+	apiV1.Handle("/products/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerProductUpdate), session.SUPPLIER_ROLE))).Methods(http.MethodPut)
+	apiV1.Handle("/products/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerProductDelete), session.ADMIN_ROLE, session.SUPPLIER_ROLE))).Methods(http.MethodDelete)
+
 	apiV1.Handle("/admin/password-update", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerAdminPasswordUpdate), session.ADMIN_ROLE))).Methods(http.MethodPut)
 	apiV1.Handle("/admin/login", HandlerFunc(HandlerAdminLogin)).Methods(http.MethodPost)

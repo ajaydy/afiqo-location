@@ -28,6 +28,8 @@ type (
 		FilterOption `json:"filter,omitempty"`
 		SupplierID   uuid.UUID `json:"supplier_id" schema:"supplier_id"`
 		CategoryID   uuid.UUID `json:"category_id" schema:"category_id"`
+		CustomerID   uuid.UUID `json:"customer_id" schema:"customer_id"`
+		CourierID    uuid.UUID `json:"courier_id" schema:"courier_id"`
 	}
 )
 

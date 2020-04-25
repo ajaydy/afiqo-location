@@ -24,7 +24,6 @@ type (
 	}
 
 	ProductAddParam struct {
-		SupplierID  uuid.UUID       `json:"supplier_id" validate:"required"`
 		CategoryID  uuid.UUID       `json:"category_id" validate:"required"`
 		Name        string          `json:"name" validate:"required"`
 		Stock       uint            `json:"stock" validate:"gte=0,required"`
