@@ -18,6 +18,7 @@ package cmd
 import (
 	"afiqo-location/api"
 	"afiqo-location/helpers"
+	maps2 "afiqo-location/maps"
 	"afiqo-location/middleware"
 	"afiqo-location/routers"
 	"context"
@@ -185,4 +186,14 @@ func initLogger() {
 	logger = helpers.NewLogger()
 	logger.Out.Formatter = new(logrus.JSONFormatter)
 	logger.Err.Formatter = new(logrus.JSONFormatter)
+}
+
+func initMaps() {
+	maps := maps2.Maps{
+		URL:    viper.GetString("maps.distance_url"),
+		ApiKey: viper.GetString("maps.api_key"),
+	}
+
+	maps2.Ini
+
 }

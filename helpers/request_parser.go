@@ -30,6 +30,9 @@ type (
 		CategoryID   uuid.UUID `json:"category_id" schema:"category_id"`
 		CustomerID   uuid.UUID `json:"customer_id" schema:"customer_id"`
 		CourierID    uuid.UUID `json:"courier_id" schema:"courier_id"`
+		OrderID      uuid.UUID `json:"order_id" schema:"order_id"`
+		ProductID    uuid.UUID `json:"product_id" schema:"product_id"`
+		WarehouseID  uuid.UUID `json:"warehouse_id" schema:"warehouse_id"`
 	}
 )
 

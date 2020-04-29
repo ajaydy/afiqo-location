@@ -15,6 +15,7 @@ type (
 	CourierModel struct {
 		ID        uuid.UUID
 		Name      string
+		Address   string
 		PhoneNo   string
 		Email     string
 		Password  string
@@ -28,6 +29,7 @@ type (
 	CourierResponse struct {
 		ID        uuid.UUID `json:"id"`
 		Name      string    `json:"name"`
+		Address   string    `json:"address"`
 		PhoneNo   string    `json:"phone_no"`
 		Email     string    `json:"email"`
 		IsActive  bool      `json:"is_active"`
@@ -42,6 +44,7 @@ func (s CourierModel) Response() CourierResponse {
 	return CourierResponse{
 		ID:        s.ID,
 		Name:      s.Name,
+		Address:   s.Address,
 		PhoneNo:   s.PhoneNo,
 		Email:     s.Email,
 		IsActive:  s.IsActive,
@@ -59,6 +62,7 @@ func GetOneCourier(ctx context.Context, db *sql.DB, courierID uuid.UUID) (Courie
 			id,
 			name,
 			email,
+			address,
 			password,
 			phone_no,
 			is_active,
@@ -76,6 +80,7 @@ func GetOneCourier(ctx context.Context, db *sql.DB, courierID uuid.UUID) (Courie
 		&courier.ID,
 		&courier.Name,
 		&courier.Email,
+		&courier.Address,
 		&courier.Password,
 		&courier.PhoneNo,
 		&courier.IsActive,
@@ -105,6 +110,7 @@ func GetAllCourier(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]Co
 		SELECT
 			id,
 			name,
+			address,
 			email,
 			password,
 			phone_no,
@@ -133,6 +139,7 @@ func GetAllCourier(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]Co
 		rows.Scan(
 			&courier.ID,
 			&courier.Name,
+			&courier.Address,
 			&courier.Email,
 			&courier.Password,
 			&courier.PhoneNo,
@@ -156,6 +163,7 @@ func GetOneCourierByEmail(ctx context.Context, db *sql.DB, email string) (Courie
 		SELECT
 			id,
 			name,
+			address,
 			email,
 			password,
 			phone_no,
@@ -173,6 +181,7 @@ func GetOneCourierByEmail(ctx context.Context, db *sql.DB, email string) (Courie
 	err := db.QueryRowContext(ctx, query, email).Scan(
 		&courier.ID,
 		&courier.Name,
+		&courier.Address,
 		&courier.Email,
 		&courier.Password,
 		&courier.PhoneNo,
@@ -202,17 +211,18 @@ func (s *CourierModel) Insert(ctx context.Context, db *sql.DB) error {
 	query := fmt.Sprintf(`
 		INSERT INTO courier(
 			name,
+			address,
 			email,
 			password,
 			phone_no,
 			created_by,
 			created_at)
 		VALUES(
-		$1,$2,$3,$4,$5,now())
+		$1,$2,$3,$4,$5,$6,now())
 		RETURNING id, created_at,is_active`)
 
 	err = db.QueryRowContext(ctx, query,
-		s.Name, s.Email, password, s.PhoneNo, s.CreatedBy).Scan(
+		s.Name, s.Address, s.Email, password, s.PhoneNo, s.CreatedBy).Scan(
 		&s.ID, &s.CreatedAt, &s.IsActive,
 	)
 
@@ -231,13 +241,14 @@ func (s *CourierModel) Update(ctx context.Context, db *sql.DB) error {
 		SET
 			name=$1,
 			phone_no=$2,
+			address=$3
 			updated_at=NOW(),
-			updated_by=$3
-		WHERE id=$4
+			updated_by=$4
+		WHERE id=$5
 		RETURNING id,created_at,updated_at,created_by,is_active,email`)
 
 	err := db.QueryRowContext(ctx, query,
-		s.Name, s.PhoneNo, s.UpdatedBy, s.ID).Scan(
+		s.Name, s.PhoneNo, s.Address, s.UpdatedBy, s.ID).Scan(
 		&s.ID, &s.CreatedAt, &s.UpdatedAt, &s.CreatedBy, &s.IsActive, &s.Email,
 	)
 

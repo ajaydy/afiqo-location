@@ -17,6 +17,7 @@ var (
 	courierService  *api.CourierModule
 	categoryService *api.CategoryModule
 	productService  *api.ProductModule
+	orderService    *api.OrderModule
 )
 
 func Init(db *sql.DB, cache *redis.Pool, log *helpers.Logger) {
@@ -29,4 +30,5 @@ func Init(db *sql.DB, cache *redis.Pool, log *helpers.Logger) {
 	courierService = api.NewCourierModule(dbPool, cachePool, logger)
 	categoryService = api.NewCategoryModule(dbPool, cachePool, logger)
 	productService = api.NewProductModule(dbPool, cachePool, logger)
+	orderService = api.NewOrderModule(dbPool, cachePool, logger)
 }
