@@ -44,9 +44,8 @@ type (
 	}
 
 	CourierUpdateParam struct {
-		ID      uuid.UUID `json:"id"`
-		Name    string    `json:"name" validate:"max=20,min=4,required"`
-		PhoneNo string    `json:"phone_no" validate:"required"`
+		Name    string `json:"name" validate:"max=20,min=4,required"`
+		PhoneNo string `json:"phone_no" validate:"required"`
 	}
 
 	CourierDeleteParam struct {

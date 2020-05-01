@@ -51,6 +51,7 @@ var rootCmd = &cobra.Command{
 		initDB()
 		initCache()
 		initLogger()
+		initMaps()
 		api.Init(dbPool, cachePool, logger)
 		helpers.Init(logger, cachePool)
 		routers.Init(dbPool, cachePool, logger)
@@ -194,6 +195,6 @@ func initMaps() {
 		ApiKey: viper.GetString("maps.api_key"),
 	}
 
-	maps2.Ini
+	maps2.Init(maps)
 
 }

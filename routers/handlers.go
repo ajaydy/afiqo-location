@@ -107,5 +107,8 @@ func InitHandlers() *mux.Router {
 		HandlerFunc(HandlerAdminPasswordUpdate), session.ADMIN_ROLE))).Methods(http.MethodPut)
 	apiV1.Handle("/admin/login", HandlerFunc(HandlerAdminLogin)).Methods(http.MethodPost)
 
+	apiV1.Handle("/orders", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerOrder), session.CUSTOMER_ROLE))).Methods(http.MethodPost)
+
 	return r
 }

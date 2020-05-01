@@ -42,18 +42,9 @@ func HandlerSupplierUpdate(w http.ResponseWriter, r *http.Request) (interface{},
 
 	ctx := r.Context()
 
-	params := mux.Vars(r)
-
-	supplierID, err := uuid.FromString(params["id"])
-
-	if err != nil {
-		return nil, helpers.ErrorWrap(err, "handler", "HandlerSupplierUpdate/parseID",
-			helpers.BadRequestMessage, http.StatusBadRequest)
-	}
-
 	var param api.SupplierUpdateParam
 
-	err = helpers.ParseBodyRequestData(ctx, r, &param)
+	err := helpers.ParseBodyRequestData(ctx, r, &param)
 	if err != nil {
 
 		return nil, helpers.ErrorWrap(err, "handler", "HandlerSupplierUpdate/ParseBodyRequestData",
@@ -61,16 +52,14 @@ func HandlerSupplierUpdate(w http.ResponseWriter, r *http.Request) (interface{},
 
 	}
 
-	param.ID = supplierID
-
 	return supplierService.Update(ctx, param)
 }
 
-func HandlerSupplierRegister(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
+func HandlerSupplierAdd(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
 
 	ctx := r.Context()
 
-	var param api.SupplierRegisterParam
+	var param api.SupplierAddParam
 
 	err := helpers.ParseBodyRequestData(ctx, r, &param)
 	if err != nil {
@@ -79,7 +68,7 @@ func HandlerSupplierRegister(w http.ResponseWriter, r *http.Request) (interface{
 
 	}
 
-	return supplierService.Register(ctx, param)
+	return supplierService.Add(ctx, param)
 }
 
 func HandlerSupplierLogin(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {

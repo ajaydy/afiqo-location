@@ -162,10 +162,16 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 
 		minimum := util.GetMinDistance(distanceArray) / 1e3
 
-		chargePerKM := float64(minimum) * 0.1
+		configuration, err := models.GetConfiguration(ctx, s.db)
+		if err != nil {
+			return nil, helpers.ErrorWrap(err, s.name, "Order/GetConfiguration", helpers.InternalServerError,
+				http.StatusInternalServerError)
+		}
+
+		deliveryFee := configuration.DeliveryFee.Mul(decimal.NewFromInt(int64(minimum)))
 
 		subtotal := decimal.Sum(product.Price.Mul(decimal.NewFromInt(int64(orderProduct.Quantity))),
-			decimal.NewFromFloat(chargePerKM))
+			deliveryFee)
 
 		orderProduct := models.OrderProductModel{
 			OrderID:   order.ID,
@@ -178,6 +184,23 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 		err = orderProduct.Insert(ctx, s.db)
 		if err != nil {
 			return nil, helpers.ErrorWrap(err, s.name, "Order/orderProduct.Insert", helpers.InternalServerError,
+				http.StatusInternalServerError)
+		}
+
+		totalStock := product.Stock - orderProduct.Quantity
+
+		productStock := models.ProductModel{
+			ID:    product.ID,
+			Stock: totalStock,
+			UpdatedBy: uuid.NullUUID{
+				UUID:  uuid.FromStringOrNil(ctx.Value("user_id").(string)),
+				Valid: true,
+			},
+		}
+
+		err = productStock.StockUpdate(ctx, s.db)
+		if err != nil {
+			return nil, helpers.ErrorWrap(err, s.name, "Order/productStock.StockUpdate", helpers.InternalServerError,
 				http.StatusInternalServerError)
 		}
 
@@ -196,24 +219,43 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 			http.StatusInternalServerError)
 	}
 
+	var totalPrice decimal.Decimal
 	for _, orderProduct := range orderProducts {
-		var totalPrice decimal.Decimal
 		totalPrice = decimal.Sum(totalPrice, orderProduct.SubTotal)
-		order := models.OrderModel{
-			ID:         order.ID,
-			TotalPrice: totalPrice,
-			UpdatedBy: uuid.NullUUID{
-				UUID:  uuid.FromStringOrNil(ctx.Value("user_id").(string)),
-				Valid: true,
-			},
-		}
-		err = order.UpdatePrice(ctx, s.db)
+	}
 
-		if err != nil {
-			return nil, helpers.ErrorWrap(err, s.name, "Order/UpdatePrice", helpers.InternalServerError,
-				http.StatusInternalServerError)
-		}
+	orderUpdate := models.OrderModel{
+		ID:         order.ID,
+		TotalPrice: totalPrice,
+		UpdatedBy: uuid.NullUUID{
+			UUID:  uuid.FromStringOrNil(ctx.Value("user_id").(string)),
+			Valid: true,
+		},
+	}
+	err = orderUpdate.UpdatePrice(ctx, s.db)
 
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Order/UpdatePrice", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	order, err = models.GetOneOrder(ctx, s.db, order.ID)
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Order/GetOneOrder", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	payment := models.PaymentModel{
+		OrderID:   order.ID,
+		Status:    0,
+		CreatedBy: uuid.FromStringOrNil(ctx.Value("user_id").(string)),
+	}
+
+	err = payment.Insert(ctx, s.db)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Order/payment.Insert", helpers.InternalServerError,
+			http.StatusInternalServerError)
 	}
 
 	response, err := order.Response(ctx, s.db, s.logger)

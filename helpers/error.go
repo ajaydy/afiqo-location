@@ -50,4 +50,5 @@ const (
 	ForbiddenMessage         = "Forbidden Message"
 	IncorrectEmailMessage    = "Incorrect Email"
 	IncorrectPasswordMessage = "Incorrect Password"
+	OrderErrorMessage        = "Not Your Order"
 )

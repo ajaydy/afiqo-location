@@ -203,6 +203,29 @@ func (s *ShipmentModel) Insert(ctx context.Context, db *sql.DB) error {
 
 }
 
+func (s *ShipmentModel) UpdateStatus(ctx context.Context, db *sql.DB) error {
+
+	query := fmt.Sprintf(`
+		UPDATE shipment
+		SET
+			status=$1,
+			updated_at=NOW(),
+			updated_by=$2
+		WHERE id=$3
+		RETURNING id,created_at,updated_at,created_by`)
+
+	err := db.QueryRowContext(ctx, query,
+		s.Status, s.UpdatedBy, s.ID).Scan(
+		&s.ID, &s.CreatedAt, &s.UpdatedAt, &s.CreatedBy,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
 func (s *ShipmentModel) Delete(ctx context.Context, db *sql.DB) error {
 
 	query := fmt.Sprintf(`

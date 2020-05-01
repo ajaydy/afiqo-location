@@ -59,7 +59,6 @@ type (
 	}
 
 	CustomerUpdateParam struct {
-		ID          uuid.UUID `json:"id"`
 		Name        string    `json:"name" validate:"max=20,min=4,required"`
 		Address     string    `json:"address" validate:"omitempty"`
 		DateOfBirth time.Time `json:"date_of_birth" validate:"required"`
@@ -271,7 +270,7 @@ func (s CustomerModule) Add(ctx context.Context, param CustomerAddParam) (interf
 func (s CustomerModule) Update(ctx context.Context, param CustomerUpdateParam) (interface{}, *helpers.Error) {
 
 	customer := models.CustomerModel{
-		ID:          param.ID,
+		ID:          uuid.FromStringOrNil(ctx.Value("user_id").(string)),
 		Name:        param.Name,
 		Gender:      param.Gender,
 		DateOfBirth: param.DateOfBirth,

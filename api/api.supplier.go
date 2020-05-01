@@ -4,6 +4,7 @@ import (
 	"afiqo-location/helpers"
 	"afiqo-location/models"
 	"afiqo-location/session"
+	"afiqo-location/util"
 	"context"
 	"database/sql"
 	"errors"
@@ -31,23 +32,20 @@ type (
 		ID uuid.UUID `json:"id"`
 	}
 
-	SupplierRegisterParam struct {
-		Name            string `json:"name" validate:"max=20,min=4,required"`
-		PhoneNo         string `json:"phone_no" validate:"required"`
-		Email           string `json:"email" validate:"email,required"`
-		Password        string `json:"password" validate:"required"`
-		ConfirmPassword string `json:"confirm_password" validate:"required"`
-	}
-
 	SupplierLoginParam struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
+	SupplierAddParam struct {
+		Name    string `json:"name"`
+		PhoneNo string `json:"phone_no"`
+		Email   string `json:"email"`
+	}
+
 	SupplierUpdateParam struct {
-		ID      uuid.UUID `json:"id"`
-		Name    string    `json:"name" validate:"max=20,min=4,required"`
-		PhoneNo string    `json:"phone_no" validate:"required"`
+		Name    string `json:"name" validate:"max=20,min=4,required"`
+		PhoneNo string `json:"phone_no" validate:"required"`
 	}
 
 	SupplierDeleteParam struct {
@@ -62,51 +60,6 @@ func NewSupplierModule(db *sql.DB, cache *redis.Pool, logger *helpers.Logger) *S
 		logger: logger,
 		name:   "module/supplier",
 	}
-}
-
-func (s SupplierModule) Register(ctx context.Context, param SupplierRegisterParam) (interface{}, *helpers.Error) {
-
-	if param.Password != param.ConfirmPassword {
-		return nil, helpers.ErrorWrap(errors.New("Password Does Not Match !"), s.name,
-			"Register/Password", helpers.InternalServerError,
-			http.StatusInternalServerError)
-	}
-
-	supplier := models.SupplierModel{
-		Name:      param.Name,
-		PhoneNo:   param.PhoneNo,
-		Email:     param.Email,
-		Password:  param.Password,
-		CreatedBy: uuid.NewV4(),
-	}
-
-	err := supplier.Insert(ctx, s.db)
-
-	if err != nil {
-		return nil, helpers.ErrorWrap(err, s.name, "Register/Insert", helpers.InternalServerError,
-			http.StatusInternalServerError)
-	}
-
-	session := session.Session{
-		UserID:     supplier.ID,
-		SessionKey: fmt.Sprintf(`%s:%s`, session.USER_SESSION, uuid.NewV4()),
-		Expiry:     86400,
-		Role:       session.SUPPLIER_ROLE,
-	}
-
-	err = session.Store(ctx)
-
-	if err != nil {
-		return nil, helpers.ErrorWrap(err, s.name, "Register/Response", helpers.InternalServerError,
-			http.StatusInternalServerError)
-	}
-
-	supplierSession := SupplierWithSession{
-		Supplier: supplier.Response(),
-		Session:  session.SessionKey,
-	}
-
-	return supplierSession, nil
 }
 
 func (s SupplierModule) Login(ctx context.Context, param SupplierLoginParam) (interface{}, *helpers.Error) {
@@ -231,10 +184,31 @@ func (s SupplierModule) List(ctx context.Context, filter helpers.Filter) (interf
 	return supplierResponse, nil
 }
 
+func (s SupplierModule) Add(ctx context.Context, param SupplierAddParam) (interface{}, *helpers.Error) {
+
+	password := util.RandomString(12)
+
+	supplier := models.SupplierModel{
+		Name:      param.Name,
+		PhoneNo:   param.PhoneNo,
+		Email:     param.Email,
+		Password:  password,
+		CreatedBy: uuid.FromStringOrNil(ctx.Value("user_id").(string)),
+	}
+
+	err := supplier.Insert(ctx, s.db)
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Add/Insert", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	return supplier.Response(), nil
+}
+
 func (s SupplierModule) Update(ctx context.Context, param SupplierUpdateParam) (interface{}, *helpers.Error) {
 
 	supplier := models.SupplierModel{
-		ID:      param.ID,
+		ID:      uuid.FromStringOrNil(ctx.Value("user_id").(string)),
 		Name:    param.Name,
 		PhoneNo: param.PhoneNo,
 		UpdatedBy: uuid.NullUUID{

@@ -248,6 +248,30 @@ func (s *ProductModel) Update(ctx context.Context, db *sql.DB) error {
 
 }
 
+func (s *ProductModel) StockUpdate(ctx context.Context, db *sql.DB) error {
+
+	query := fmt.Sprintf(`
+		UPDATE product
+		SET
+			stock=$1
+			updated_at=NOW(),
+			updated_by=$2
+		WHERE id=$3
+		RETURNING id,created_at,updated_at,created_by,is_delete`)
+
+	err := db.QueryRowContext(ctx, query,
+		s.Stock, s.UpdatedBy, s.ID).Scan(
+		&s.ID, &s.CreatedAt, &s.UpdatedAt, &s.CreatedBy, &s.IsDelete,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
 func (s *ProductModel) Delete(ctx context.Context, db *sql.DB) error {
 
 	query := fmt.Sprintf(`
