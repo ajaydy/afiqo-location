@@ -119,7 +119,7 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 				http.StatusInternalServerError)
 		}
 
-		warehouseProducts, err := models.GetAllWarehouseProduct(ctx, s.db, helpers.Filter{
+		stocks, err := models.GetAllStock(ctx, s.db, helpers.Filter{
 			FilterOption: helpers.FilterOption{
 				Limit:  999,
 				Offset: 0,
@@ -128,14 +128,14 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 		})
 
 		if err != nil {
-			return nil, helpers.ErrorWrap(err, s.name, "Order/GetAllWarehouseProduct", helpers.InternalServerError,
+			return nil, helpers.ErrorWrap(err, s.name, "Order/GetAllStock", helpers.InternalServerError,
 				http.StatusInternalServerError)
 		}
 
 		var warehouses []models.WarehouseModel
-		for _, warehouseProduct := range warehouseProducts {
+		for _, stock := range stocks {
 
-			warehouse, err := models.GetOneWarehouse(ctx, s.db, warehouseProduct.WarehouseID)
+			warehouse, err := models.GetOneWarehouse(ctx, s.db, stock.WarehouseID)
 
 			if err != nil {
 				return nil, helpers.ErrorWrap(err, s.name, "Order/GetOneWarehouse", helpers.InternalServerError,

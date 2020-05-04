@@ -23,15 +23,15 @@ type (
 	}
 
 	WarehouseAddParam struct {
-		Name    string `json:"name"`
-		Address string `json:"address"`
-		PhoneNo string `json:"phone_no"`
+		Name    string `json:"name" validate:"required"`
+		Address string `json:"address" validate:"required"`
+		PhoneNo string `json:"phone_no" validate:"required"`
 	}
 
 	WarehouseUpdateParam struct {
 		ID      uuid.UUID `json:"id"`
 		Name    string    `json:"name" validate:"max=20,min=4,required"`
-		Address string    `json:"address"`
+		Address string    `json:"address" validate:"required"`
 		PhoneNo string    `json:"phone_no" validate:"required"`
 	}
 

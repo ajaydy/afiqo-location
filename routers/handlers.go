@@ -65,7 +65,6 @@ func InitHandlers() *mux.Router {
 	apiV1.Handle("/suppliers/password-update", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerSupplierPasswordUpdate), session.SUPPLIER_ROLE))).Methods(http.MethodPut)
 	apiV1.Handle("/supplier/login", HandlerFunc(HandlerSupplierLogin)).Methods(http.MethodPost)
-	apiV1.Handle("/supplier/register", HandlerFunc(HandlerSupplierRegister)).Methods(http.MethodPost)
 
 	apiV1.Handle("/couriers", middleware.SessionMiddleware(
 		HandlerFunc(HandlerCourierList))).Methods(http.MethodGet)
@@ -103,12 +102,59 @@ func InitHandlers() *mux.Router {
 	apiV1.Handle("/products/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerProductDelete), session.ADMIN_ROLE, session.SUPPLIER_ROLE))).Methods(http.MethodDelete)
 
+	apiV1.Handle("/warehouses", middleware.SessionMiddleware(
+		HandlerFunc(HandlerWarehouseList))).Methods(http.MethodGet)
+	apiV1.Handle("/warehouses/{id}", middleware.SessionMiddleware(
+		HandlerFunc(HandlerWarehouseDetail))).Methods(http.MethodGet)
+	apiV1.Handle("/warehouses", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerWarehouseAdd), session.ADMIN_ROLE))).Methods(http.MethodPost)
+	apiV1.Handle("/warehouses/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerWarehouseUpdate), session.ADMIN_ROLE))).Methods(http.MethodPut)
+	apiV1.Handle("/warehouses/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerWarehouseDelete), session.ADMIN_ROLE))).Methods(http.MethodDelete)
+
+	apiV1.Handle("/payments", middleware.SessionMiddleware(
+		HandlerFunc(HandlerPaymentList))).Methods(http.MethodGet)
+	apiV1.Handle("/payments/{id}", middleware.SessionMiddleware(
+		HandlerFunc(HandlerPaymentDetail))).Methods(http.MethodGet)
+	apiV1.Handle("/payments/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerPaymentUpdate), session.ADMIN_ROLE, session.CUSTOMER_ROLE))).Methods(http.MethodPut)
+
+	apiV1.Handle("/shipments", middleware.SessionMiddleware(
+		HandlerFunc(HandlerShipmentList))).Methods(http.MethodGet)
+	apiV1.Handle("/shipments/{id}", middleware.SessionMiddleware(
+		HandlerFunc(HandlerShipmentDetail))).Methods(http.MethodGet)
+	apiV1.Handle("/shipments", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerShipmentAdd), session.ADMIN_ROLE))).Methods(http.MethodPost)
+	apiV1.Handle("/shipments/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerShipmentUpdate), session.ADMIN_ROLE))).Methods(http.MethodPut)
+	apiV1.Handle("/shipments/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerShipmentDelete), session.ADMIN_ROLE))).Methods(http.MethodDelete)
+
+	apiV1.Handle("/orders", middleware.SessionMiddleware(
+		HandlerFunc(HandlerOrderList))).Methods(http.MethodGet)
+	apiV1.Handle("/orders/{id}", middleware.SessionMiddleware(
+		HandlerFunc(HandlerOrderDetail))).Methods(http.MethodGet)
+	apiV1.Handle("/orders", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerOrder), session.CUSTOMER_ROLE))).Methods(http.MethodPost)
+	apiV1.Handle("/orders/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerOrderDelete), session.ADMIN_ROLE))).Methods(http.MethodDelete)
+
+	apiV1.Handle("/stocks", middleware.SessionMiddleware(
+		HandlerFunc(HandlerStockList))).Methods(http.MethodGet)
+	apiV1.Handle("/stocks/{id}", middleware.SessionMiddleware(
+		HandlerFunc(HandlerStockDetail))).Methods(http.MethodGet)
+	apiV1.Handle("/stocks", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerStockAdd), session.ADMIN_ROLE))).Methods(http.MethodPost)
+
+	apiV1.Handle("/order-products", middleware.SessionMiddleware(
+		HandlerFunc(HandlerOrderProductList))).Methods(http.MethodGet)
+	apiV1.Handle("/order-products/{id}", middleware.SessionMiddleware(
+		HandlerFunc(HandlerOrderProductDetail))).Methods(http.MethodGet)
+
 	apiV1.Handle("/admin/password-update", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerAdminPasswordUpdate), session.ADMIN_ROLE))).Methods(http.MethodPut)
 	apiV1.Handle("/admin/login", HandlerFunc(HandlerAdminLogin)).Methods(http.MethodPost)
-
-	apiV1.Handle("/orders", middleware.SessionMiddleware(middleware.RolesMiddleware(
-		HandlerFunc(HandlerOrder), session.CUSTOMER_ROLE))).Methods(http.MethodPost)
 
 	return r
 }

@@ -12,7 +12,7 @@ import (
 )
 
 type (
-	WarehouseProductModel struct {
+	StockModel struct {
 		ID          uuid.UUID
 		ProductID   uuid.UUID
 		WarehouseID uuid.UUID
@@ -24,7 +24,7 @@ type (
 		UpdatedAt   pq.NullTime
 	}
 
-	WarehouseProductResponse struct {
+	StockResponse struct {
 		ID        uuid.UUID         `json:"id"`
 		Product   ProductResponse   `json:"product"`
 		Warehouse WarehouseResponse `json:"warehouse"`
@@ -37,29 +37,29 @@ type (
 	}
 )
 
-func (s WarehouseProductModel) Response(ctx context.Context, db *sql.DB, logger *helpers.Logger) (
-	WarehouseProductResponse, error) {
+func (s StockModel) Response(ctx context.Context, db *sql.DB, logger *helpers.Logger) (
+	StockResponse, error) {
 
 	product, err := GetOneProduct(ctx, db, s.ProductID)
 	if err != nil {
-		logger.Err.Printf(`model.warehouse.product.go/GetOneProduct/%v`, err)
-		return WarehouseProductResponse{}, nil
+		logger.Err.Printf(`model.stock.go/GetOneProduct/%v`, err)
+		return StockResponse{}, nil
 	}
 
 	productResponse, err := product.Response(ctx, db, logger)
 
 	if err != nil {
-		logger.Err.Printf(`model.warehouse.product.go/product.Response/%v`, err)
-		return WarehouseProductResponse{}, nil
+		logger.Err.Printf(`model.stock.go/product.Response/%v`, err)
+		return StockResponse{}, nil
 	}
 
 	warehouse, err := GetOneWarehouse(ctx, db, s.WarehouseID)
 	if err != nil {
-		logger.Err.Printf(`model.warehouse.product.go/GetOneWarehouse/%v`, err)
-		return WarehouseProductResponse{}, nil
+		logger.Err.Printf(`model.stock.go/GetOneWarehouse/%v`, err)
+		return StockResponse{}, nil
 	}
 
-	return WarehouseProductResponse{
+	return StockResponse{
 		ID:        s.ID,
 		Product:   productResponse,
 		Warehouse: warehouse.Response(),
@@ -73,8 +73,8 @@ func (s WarehouseProductModel) Response(ctx context.Context, db *sql.DB, logger 
 
 }
 
-func GetOneWarehouseProduct(ctx context.Context, db *sql.DB, warehouseProductID uuid.UUID) (
-	WarehouseProductModel, error) {
+func GetOneStock(ctx context.Context, db *sql.DB, stockID uuid.UUID) (
+	StockModel, error) {
 
 	query := fmt.Sprintf(`
 		SELECT
@@ -87,34 +87,34 @@ func GetOneWarehouseProduct(ctx context.Context, db *sql.DB, warehouseProductID 
 			created_at,
 			updated_by,
 			updated_at
-		FROM warehouse_product
+		FROM stock
 		WHERE 
 			id = $1
 	`)
 
-	var warehouse WarehouseProductModel
-	err := db.QueryRowContext(ctx, query, warehouseProductID).Scan(
-		&warehouse.ID,
-		&warehouse.WarehouseID,
-		&warehouse.ProductID,
-		&warehouse.Stock,
-		&warehouse.IsDelete,
-		&warehouse.CreatedBy,
-		&warehouse.CreatedAt,
-		&warehouse.UpdatedBy,
-		&warehouse.UpdatedAt,
+	var stock StockModel
+	err := db.QueryRowContext(ctx, query, stockID).Scan(
+		&stock.ID,
+		&stock.WarehouseID,
+		&stock.ProductID,
+		&stock.Stock,
+		&stock.IsDelete,
+		&stock.CreatedBy,
+		&stock.CreatedAt,
+		&stock.UpdatedBy,
+		&stock.UpdatedAt,
 	)
 
 	if err != nil {
-		return WarehouseProductModel{}, err
+		return StockModel{}, err
 	}
 
-	return warehouse, nil
+	return stock, nil
 
 }
 
-func GetAllWarehouseProduct(ctx context.Context, db *sql.DB, filter helpers.Filter) (
-	[]WarehouseProductModel, error) {
+func GetAllStock(ctx context.Context, db *sql.DB, filter helpers.Filter) (
+	[]StockModel, error) {
 
 	var filters []string
 
@@ -146,7 +146,7 @@ func GetAllWarehouseProduct(ctx context.Context, db *sql.DB, filter helpers.Filt
 			created_at,
 			updated_by,
 			updated_at
-		FROM warehouse_product
+		FROM stock
 		LIMIT $1 OFFSET $2`)
 
 	rows, err := db.QueryContext(ctx, query, filter.Limit, filter.Offset)
@@ -157,33 +157,33 @@ func GetAllWarehouseProduct(ctx context.Context, db *sql.DB, filter helpers.Filt
 
 	defer rows.Close()
 
-	var warehouses []WarehouseProductModel
+	var stocks []StockModel
 	for rows.Next() {
-		var warehouse WarehouseProductModel
+		var stock StockModel
 
 		rows.Scan(
-			&warehouse.ID,
-			&warehouse.WarehouseID,
-			&warehouse.ProductID,
-			&warehouse.Stock,
-			&warehouse.IsDelete,
-			&warehouse.CreatedBy,
-			&warehouse.CreatedAt,
-			&warehouse.UpdatedBy,
-			&warehouse.UpdatedAt,
+			&stock.ID,
+			&stock.WarehouseID,
+			&stock.ProductID,
+			&stock.Stock,
+			&stock.IsDelete,
+			&stock.CreatedBy,
+			&stock.CreatedAt,
+			&stock.UpdatedBy,
+			&stock.UpdatedAt,
 		)
 
-		warehouses = append(warehouses, warehouse)
+		stocks = append(stocks, stock)
 	}
 
-	return warehouses, nil
+	return stocks, nil
 
 }
 
-func (s *WarehouseProductModel) Insert(ctx context.Context, db *sql.DB) error {
+func (s *StockModel) Insert(ctx context.Context, db *sql.DB) error {
 
 	query := fmt.Sprintf(`
-		INSERT INTO warehouse_product(
+		INSERT INTO stock(
 			warehouse_id,
 			product_id,
 			stock,
@@ -205,10 +205,10 @@ func (s *WarehouseProductModel) Insert(ctx context.Context, db *sql.DB) error {
 	return nil
 
 }
-func (s *WarehouseProductModel) Update(ctx context.Context, db *sql.DB) error {
+func (s *StockModel) Update(ctx context.Context, db *sql.DB) error {
 
 	query := fmt.Sprintf(`
-		UPDATE warehouse_product
+		UPDATE stock
 		SET
 			stock = $1
 			updated_at=NOW(),
@@ -229,10 +229,10 @@ func (s *WarehouseProductModel) Update(ctx context.Context, db *sql.DB) error {
 
 }
 
-func (s *WarehouseProductModel) Delete(ctx context.Context, db *sql.DB) error {
+func (s *StockModel) Delete(ctx context.Context, db *sql.DB) error {
 
 	query := fmt.Sprintf(`
-		UPDATE warehouse_product
+		UPDATE stock
 		SET
 			is_delete=true,
 			updated_by=$1,

@@ -179,8 +179,8 @@ func (s *WarehouseModel) Update(ctx context.Context, db *sql.DB) error {
 			address=$2,
 			phone_no=$3,
 			updated_at=NOW(),
-			updated_by=$3
-		WHERE id=$4
+			updated_by=$4
+		WHERE id=$5
 		RETURNING id,created_at,updated_at,created_by`)
 
 	err := db.QueryRowContext(ctx, query,

@@ -40,8 +40,8 @@ type (
 	}
 
 	CustomerLoginParam struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email    string `json:"email" validate:"required"`
+		Password string `json:"password" validate:"required"`
 	}
 
 	CustomerDetailParam struct {
@@ -59,6 +59,7 @@ type (
 	}
 
 	CustomerUpdateParam struct {
+		ID          uuid.UUID
 		Name        string    `json:"name" validate:"max=20,min=4,required"`
 		Address     string    `json:"address" validate:"omitempty"`
 		DateOfBirth time.Time `json:"date_of_birth" validate:"required"`

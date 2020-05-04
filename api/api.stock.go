@@ -11,14 +11,14 @@ import (
 )
 
 type (
-	WarehouseProductModule struct {
+	StockModule struct {
 		db     *sql.DB
 		cache  *redis.Pool
 		logger *helpers.Logger
 		name   string
 	}
 
-	WarehouseProductDetailParam struct {
+	StockDetailParam struct {
 		ID uuid.UUID `json:"id"`
 	}
 
@@ -29,26 +29,26 @@ type (
 	}
 )
 
-func NewWarehouseProductModule(db *sql.DB, cache *redis.Pool, logger *helpers.Logger) *WarehouseProductModule {
-	return &WarehouseProductModule{
+func NewStockModule(db *sql.DB, cache *redis.Pool, logger *helpers.Logger) *StockModule {
+	return &StockModule{
 		db:     db,
 		cache:  cache,
 		logger: logger,
-		name:   "module/warehouseProduct",
+		name:   "module/stock",
 	}
 }
 
-func (s WarehouseProductModule) Detail(ctx context.Context, param WarehouseProductDetailParam) (
+func (s StockModule) Detail(ctx context.Context, param StockDetailParam) (
 	interface{}, *helpers.Error) {
 
-	warehouseProduct, err := models.GetOneWarehouseProduct(ctx, s.db, param.ID)
+	stock, err := models.GetOneStock(ctx, s.db, param.ID)
 
 	if err != nil {
-		return nil, helpers.ErrorWrap(err, s.name, "Detail/GetOneWarehouseProduct", helpers.InternalServerError,
+		return nil, helpers.ErrorWrap(err, s.name, "Detail/GetOneStock", helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 
-	response, err := warehouseProduct.Response(ctx, s.db, s.logger)
+	response, err := stock.Response(ctx, s.db, s.logger)
 
 	if err != nil {
 		return nil, helpers.ErrorWrap(err, s.name, "Detail/Response", helpers.InternalServerError,
@@ -58,46 +58,46 @@ func (s WarehouseProductModule) Detail(ctx context.Context, param WarehouseProdu
 	return response, nil
 }
 
-func (s WarehouseProductModule) List(ctx context.Context, filter helpers.Filter) (interface{}, *helpers.Error) {
+func (s StockModule) List(ctx context.Context, filter helpers.Filter) (interface{}, *helpers.Error) {
 
-	warehouseProducts, err := models.GetAllWarehouseProduct(ctx, s.db, filter)
+	stocks, err := models.GetAllStock(ctx, s.db, filter)
 
 	if err != nil {
-		return nil, helpers.ErrorWrap(err, s.name, "List/GetAllWarehouseProduct", helpers.InternalServerError,
+		return nil, helpers.ErrorWrap(err, s.name, "List/GetAllStock", helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 
-	var warehouseProductResponse []models.WarehouseProductResponse
-	for _, warehouseProduct := range warehouseProducts {
-		response, err := warehouseProduct.Response(ctx, s.db, s.logger)
+	var stockResponses []models.StockResponse
+	for _, stock := range stocks {
+		response, err := stock.Response(ctx, s.db, s.logger)
 		if err != nil {
 			return nil, helpers.ErrorWrap(err, s.name, "List/Response", helpers.InternalServerError,
 				http.StatusInternalServerError)
 		}
 
-		warehouseProductResponse = append(warehouseProductResponse, response)
+		stockResponses = append(stockResponses, response)
 	}
 
-	return warehouseProductResponse, nil
+	return stockResponses, nil
 }
 
-func (s WarehouseProductModule) Add(ctx context.Context, param StockAddParam) (interface{}, *helpers.Error) {
+func (s StockModule) Add(ctx context.Context, param StockAddParam) (interface{}, *helpers.Error) {
 
-	warehouseProduct := models.WarehouseProductModel{
+	stock := models.StockModel{
 		ProductID:   param.ProductID,
 		WarehouseID: param.WarehouseID,
 		Stock:       param.Stock,
 		CreatedBy:   uuid.FromStringOrNil(ctx.Value("user_id").(string)),
 	}
 
-	err := warehouseProduct.Insert(ctx, s.db)
+	err := stock.Insert(ctx, s.db)
 
 	if err != nil {
 		return nil, helpers.ErrorWrap(err, s.name, "Add/Insert", helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 
-	product, err := models.GetOneProduct(ctx, s.db, warehouseProduct.ProductID)
+	product, err := models.GetOneProduct(ctx, s.db, stock.ProductID)
 
 	if err != nil {
 		return nil, helpers.ErrorWrap(err, s.name, "Add/GetOneProduct", helpers.InternalServerError,
@@ -107,7 +107,7 @@ func (s WarehouseProductModule) Add(ctx context.Context, param StockAddParam) (i
 	totalStock := product.Stock + param.Stock
 
 	productStock := models.ProductModel{
-		ID:    warehouseProduct.ProductID,
+		ID:    stock.ProductID,
 		Stock: totalStock,
 		UpdatedBy: uuid.NullUUID{
 			UUID:  uuid.FromStringOrNil(ctx.Value("user_id").(string)),
@@ -122,7 +122,7 @@ func (s WarehouseProductModule) Add(ctx context.Context, param StockAddParam) (i
 			http.StatusInternalServerError)
 	}
 
-	response, err := warehouseProduct.Response(ctx, s.db, s.logger)
+	response, err := stock.Response(ctx, s.db, s.logger)
 	if err != nil {
 		return nil, helpers.ErrorWrap(err, s.name, "Add/Response", helpers.InternalServerError,
 			http.StatusInternalServerError)

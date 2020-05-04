@@ -21,6 +21,10 @@ type (
 	PaymentUpdateParam struct {
 		ID uuid.UUID `json:"id"`
 	}
+
+	PaymentDetailParam struct {
+		ID uuid.UUID `json:"id"`
+	}
 )
 
 func NewPaymentModule(db *sql.DB, cache *redis.Pool, logger *helpers.Logger) *PaymentModule {
@@ -30,6 +34,46 @@ func NewPaymentModule(db *sql.DB, cache *redis.Pool, logger *helpers.Logger) *Pa
 		logger: logger,
 		name:   "module/payment",
 	}
+}
+func (s PaymentModule) Detail(ctx context.Context, param PaymentDetailParam) (interface{}, *helpers.Error) {
+	payment, err := models.GetOnePayment(ctx, s.db, param.ID)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Detail/GetOnePayment", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	response, err := payment.Response(ctx, s.db, s.logger)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Detail/Response", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	return response, nil
+}
+
+func (s PaymentModule) List(ctx context.Context, filter helpers.Filter) (interface{}, *helpers.Error) {
+
+	payments, err := models.GetAllPayment(ctx, s.db, filter)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "List/GetAllPayment", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	var paymentResponse []models.PaymentResponse
+	for _, payment := range payments {
+		response, err := payment.Response(ctx, s.db, s.logger)
+
+		if err != nil {
+			return nil, helpers.ErrorWrap(err, s.name, "List/Response", helpers.InternalServerError,
+				http.StatusInternalServerError)
+		}
+		paymentResponse = append(paymentResponse, response)
+	}
+
+	return paymentResponse, nil
 }
 
 func (s PaymentModule) Update(ctx context.Context, param PaymentUpdateParam) (interface{}, *helpers.Error) {

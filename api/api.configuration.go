@@ -20,7 +20,7 @@ type (
 	}
 
 	ConfigurationUpdateParam struct {
-		DeliveryFee decimal.Decimal `json:"delivery_fee"`
+		DeliveryFee decimal.Decimal `json:"delivery_fee" validate:"required"`
 	}
 )
 

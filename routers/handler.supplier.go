@@ -63,7 +63,7 @@ func HandlerSupplierAdd(w http.ResponseWriter, r *http.Request) (interface{}, *h
 
 	err := helpers.ParseBodyRequestData(ctx, r, &param)
 	if err != nil {
-		return nil, helpers.ErrorWrap(err, "handler", "HandlerSupplierRegister/ParseBodyRequestData",
+		return nil, helpers.ErrorWrap(err, "handler", "HandlerSupplierAdd/ParseBodyRequestData",
 			helpers.BadRequestMessage, http.StatusBadRequest)
 
 	}

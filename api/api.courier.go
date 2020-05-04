@@ -38,14 +38,17 @@ type (
 
 	CourierAddParam struct {
 		Name     string `json:"name" validate:"max=20,min=4,required"`
+		Address  string `json:"address" validate:"required"`
 		PhoneNo  string `json:"phone_no" validate:"required"`
 		Email    string `json:"email" validate:"email,required"`
 		Password string `json:"password" validate:"required"`
 	}
 
 	CourierUpdateParam struct {
-		Name    string `json:"name" validate:"max=20,min=4,required"`
-		PhoneNo string `json:"phone_no" validate:"required"`
+		ID      uuid.UUID `json:"id"`
+		Name    string    `json:"name" validate:"max=20,min=4,required"`
+		Address string    `json:"address" validate:"required"`
+		PhoneNo string    `json:"phone_no" validate:"required"`
 	}
 
 	CourierDeleteParam struct {
@@ -185,6 +188,7 @@ func (s CourierModule) Add(ctx context.Context, param CourierAddParam) (interfac
 		Name:      param.Name,
 		PhoneNo:   param.PhoneNo,
 		Email:     param.Email,
+		Address:   param.Address,
 		Password:  param.Password,
 		CreatedBy: uuid.FromStringOrNil(ctx.Value("user_id").(string)),
 	}
@@ -203,6 +207,7 @@ func (s CourierModule) Update(ctx context.Context, param CourierUpdateParam) (in
 	courier := models.CourierModel{
 		ID:      param.ID,
 		Name:    param.Name,
+		Address: param.Address,
 		PhoneNo: param.PhoneNo,
 		UpdatedBy: uuid.NullUUID{
 			UUID:  uuid.FromStringOrNil(ctx.Value("user_id").(string)),
