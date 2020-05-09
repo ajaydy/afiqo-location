@@ -1,9 +1,11 @@
 package api
 
 import (
+	"afiqo-location/email"
 	"afiqo-location/helpers"
 	"afiqo-location/models"
 	"afiqo-location/session"
+	"afiqo-location/util"
 	"context"
 	"database/sql"
 	"errors"
@@ -37,11 +39,10 @@ type (
 	}
 
 	CourierAddParam struct {
-		Name     string `json:"name" validate:"max=20,min=4,required"`
-		Address  string `json:"address" validate:"required"`
-		PhoneNo  string `json:"phone_no" validate:"required"`
-		Email    string `json:"email" validate:"email,required"`
-		Password string `json:"password" validate:"required"`
+		Name    string `json:"name" validate:"max=20,min=4,required"`
+		Address string `json:"address" validate:"required"`
+		PhoneNo string `json:"phone_no" validate:"required"`
+		Email   string `json:"email" validate:"email,required"`
 	}
 
 	CourierUpdateParam struct {
@@ -116,7 +117,7 @@ func (s CourierModule) PasswordUpdate(ctx context.Context, param PasswordUpdateP
 	if err != nil {
 		return nil, helpers.ErrorWrap(errors.New("Current Password Is Incorrect!"), s.name,
 			"PasswordUpdate/CompareHashAndPassword",
-			helpers.IncorrectPasswordMessage,
+			helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 
@@ -184,12 +185,14 @@ func (s CourierModule) List(ctx context.Context, filter helpers.Filter) (interfa
 
 func (s CourierModule) Add(ctx context.Context, param CourierAddParam) (interface{}, *helpers.Error) {
 
+	password := util.RandomString(10)
+
 	courier := models.CourierModel{
 		Name:      param.Name,
 		PhoneNo:   param.PhoneNo,
 		Email:     param.Email,
 		Address:   param.Address,
-		Password:  param.Password,
+		Password:  password,
 		CreatedBy: uuid.FromStringOrNil(ctx.Value("user_id").(string)),
 	}
 
@@ -198,6 +201,34 @@ func (s CourierModule) Add(ctx context.Context, param CourierAddParam) (interfac
 		return nil, helpers.ErrorWrap(err, s.name, "Add/Insert", helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
+
+	data := email.MailData{
+		Name: param.Name,
+		Actions: []email.Action{
+			{
+				Button: email.Button{
+					Text: password,
+				},
+			},
+		},
+	}
+
+	body, err := data.GenerateForPassword()
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Add/GenerateForPassword", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	mail := email.Mail{
+		Subject: "Password For Login",
+		Body:    body,
+		To:      courier.Email,
+	}
+
+	go func() {
+		mail.SendEmail()
+	}()
 
 	return courier.Response(), nil
 }

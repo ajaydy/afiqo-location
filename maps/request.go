@@ -1,7 +1,6 @@
 package maps
 
 import (
-	"afiqo-location/maps/models"
 	"context"
 	"encoding/json"
 	"errors"
@@ -48,7 +47,7 @@ func Get(ctx context.Context, ExtraURL string, parameters map[string]string, dat
 
 	if err := json.Unmarshal(rBody, data); err != nil {
 		log.Printf("error on unmarshal %v", err)
-		var errorResponse models.ErrorModel
+		var errorResponse ErrorModel
 		err := json.Unmarshal(rBody, &errorResponse)
 		if err != nil {
 			return err

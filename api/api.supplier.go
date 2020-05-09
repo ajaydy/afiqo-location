@@ -1,6 +1,7 @@
 package api
 
 import (
+	"afiqo-location/email"
 	"afiqo-location/helpers"
 	"afiqo-location/models"
 	"afiqo-location/session"
@@ -33,14 +34,14 @@ type (
 	}
 
 	SupplierLoginParam struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email    string `json:"email" validate:"required"`
+		Password string `json:"password" validate:"required"`
 	}
 
 	SupplierAddParam struct {
-		Name    string `json:"name"`
-		PhoneNo string `json:"phone_no"`
-		Email   string `json:"email"`
+		Name    string `json:"name" validate:"max=20,min=4,required"`
+		PhoneNo string `json:"phone_no" validate:"required"`
+		Email   string `json:"email" validate:"email,required"`
 	}
 
 	SupplierUpdateParam struct {
@@ -186,7 +187,7 @@ func (s SupplierModule) List(ctx context.Context, filter helpers.Filter) (interf
 
 func (s SupplierModule) Add(ctx context.Context, param SupplierAddParam) (interface{}, *helpers.Error) {
 
-	password := util.RandomString(12)
+	password := util.RandomString(10)
 
 	supplier := models.SupplierModel{
 		Name:      param.Name,
@@ -201,6 +202,34 @@ func (s SupplierModule) Add(ctx context.Context, param SupplierAddParam) (interf
 		return nil, helpers.ErrorWrap(err, s.name, "Add/Insert", helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
+
+	data := email.MailData{
+		Name: param.Name,
+		Actions: []email.Action{
+			{
+				Button: email.Button{
+					Text: password,
+				},
+			},
+		},
+	}
+
+	body, err := data.GenerateForPassword()
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Add/GenerateForPassword", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	mail := email.Mail{
+		Subject: "Password For Login",
+		Body:    body,
+		To:      supplier.Email,
+	}
+
+	go func() {
+		mail.SendEmail()
+	}()
 
 	return supplier.Response(), nil
 }

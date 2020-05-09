@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"github.com/gomodule/redigo/redis"
 	uuid "github.com/satori/go.uuid"
+	"github.com/shopspring/decimal"
 	"net/http"
 )
 
@@ -23,9 +24,11 @@ type (
 	}
 
 	WarehouseAddParam struct {
-		Name    string `json:"name" validate:"required"`
-		Address string `json:"address" validate:"required"`
-		PhoneNo string `json:"phone_no" validate:"required"`
+		Name      string          `json:"name" validate:"required"`
+		Address   string          `json:"address" validate:"required"`
+		PhoneNo   string          `json:"phone_no" validate:"required"`
+		Latitude  decimal.Decimal `json:"latitude" validate:"required"`
+		Longitude decimal.Decimal `json:"longitude" validate:"required"`
 	}
 
 	WarehouseUpdateParam struct {
@@ -83,6 +86,8 @@ func (s WarehouseModule) Add(ctx context.Context, param WarehouseAddParam) (inte
 		Name:      param.Name,
 		Address:   param.Address,
 		PhoneNo:   param.PhoneNo,
+		Latitude:  param.Latitude,
+		Longitude: param.Longitude,
 		CreatedBy: uuid.FromStringOrNil(ctx.Value("user_id").(string)),
 	}
 

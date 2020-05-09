@@ -49,7 +49,7 @@ func GetConfiguration(ctx context.Context, db *sql.DB) (ConfigurationModel, erro
 	query := fmt.Sprintf(`
 		SELECT
 			id,
-			delivery_fee
+			delivery_fee,
 			is_delete,
 			created_by,
 			created_at,

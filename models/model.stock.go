@@ -113,6 +113,48 @@ func GetOneStock(ctx context.Context, db *sql.DB, stockID uuid.UUID) (
 
 }
 
+func GetOneStockByProductAndWarehouse(ctx context.Context, db *sql.DB, warehouseID, productID uuid.UUID) (
+	StockModel, error) {
+
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			warehouse_id,
+			product_id,
+			stock,
+			is_delete,
+			created_by,
+			created_at,
+			updated_by,
+			updated_at
+		FROM stock
+		WHERE 
+			warehouse_id=$1
+		AND 
+			product_id=$2
+	`)
+
+	var stock StockModel
+	err := db.QueryRowContext(ctx, query, warehouseID, productID).Scan(
+		&stock.ID,
+		&stock.WarehouseID,
+		&stock.ProductID,
+		&stock.Stock,
+		&stock.IsDelete,
+		&stock.CreatedBy,
+		&stock.CreatedAt,
+		&stock.UpdatedBy,
+		&stock.UpdatedAt,
+	)
+
+	if err != nil {
+		return StockModel{}, err
+	}
+
+	return stock, nil
+
+}
+
 func GetAllStock(ctx context.Context, db *sql.DB, filter helpers.Filter) (
 	[]StockModel, error) {
 
@@ -147,9 +189,59 @@ func GetAllStock(ctx context.Context, db *sql.DB, filter helpers.Filter) (
 			updated_by,
 			updated_at
 		FROM stock
-		LIMIT $1 OFFSET $2`)
+		%s
+		LIMIT $1 OFFSET $2`, filterJoin)
 
 	rows, err := db.QueryContext(ctx, query, filter.Limit, filter.Offset)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var stocks []StockModel
+	for rows.Next() {
+		var stock StockModel
+
+		rows.Scan(
+			&stock.ID,
+			&stock.WarehouseID,
+			&stock.ProductID,
+			&stock.Stock,
+			&stock.IsDelete,
+			&stock.CreatedBy,
+			&stock.CreatedAt,
+			&stock.UpdatedBy,
+			&stock.UpdatedAt,
+		)
+
+		stocks = append(stocks, stock)
+	}
+
+	return stocks, nil
+
+}
+
+func GetAllStockByProductID(ctx context.Context, db *sql.DB, productID uuid.UUID) (
+	[]StockModel, error) {
+
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			warehouse_id,
+			product_id,
+			stock,
+			is_delete,
+			created_by,
+			created_at,
+			updated_by,
+			updated_at
+		FROM stock
+		WHERE product_id=$1
+		`)
+
+	rows, err := db.QueryContext(ctx, query, productID)
 
 	if err != nil {
 		return nil, err
@@ -210,7 +302,7 @@ func (s *StockModel) Update(ctx context.Context, db *sql.DB) error {
 	query := fmt.Sprintf(`
 		UPDATE stock
 		SET
-			stock = $1
+			stock = $1,
 			updated_at=NOW(),
 			updated_by=$2
 		WHERE id=$3

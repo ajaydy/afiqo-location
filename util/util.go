@@ -1,6 +1,9 @@
 package util
 
-import "math/rand"
+import (
+	"math/rand"
+	"time"
+)
 
 func GetGender(gender int) string {
 	switch gender {
@@ -12,6 +15,21 @@ func GetGender(gender int) string {
 	default:
 		return ""
 	}
+}
+
+//
+//func MeterToKilometer(m int) float64 {
+//	kilometer := float64(m) / 1000
+//	return math.Round(kilometer*100) / 100
+//}
+
+func count(number int) int {
+	count := 0
+	for number != 0 {
+		number /= 10
+		count += 1
+	}
+	return count
 }
 
 func GetOrderStatus(status int) string {
@@ -39,17 +57,21 @@ func GetPaymentStatus(status int) string {
 	}
 }
 
-func GetMinDistance(distanceArray []int) int {
-	min := distanceArray[0]
-	for _, value := range distanceArray {
-		if value < min {
-			min = value
-		}
-	}
-	return min
-}
+//func GetMinDistance(distances []api.Distance) (float64, uuid.UUID) {
+//	min := distances[0].DistanceValue
+//	id := distances[0].WarehouseID
+//	for _, distance := range distances {
+//		if distance.DistanceValue < min {
+//			min = distance.DistanceValue
+//			id = distance.WarehouseID
+//		}
+//	}
+//	return MeterToKilometer(min), id
+//}
 
 func RandomString(n int) string {
+
+	rand.Seed(time.Now().UnixNano())
 	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 	s := make([]rune, n)

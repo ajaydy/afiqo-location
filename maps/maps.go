@@ -1,15 +1,17 @@
 package maps
 
 import (
-	"afiqo-location/maps/models"
 	"context"
+	uuid "github.com/satori/go.uuid"
 )
 
-func GetDistanceBetweenTwoLocations(ctx context.Context, origin, destination string) (models.DistanceMatrix, error) {
+func GetDistanceBetweenTwoLocations(ctx context.Context, origin, destination string, ID uuid.UUID) (DistanceMatrix, error) {
 
 	extraURL := "/maps/api/distancematrix/json"
 
-	var distance models.DistanceMatrix
+	var distance DistanceMatrix
+
+	distance.ID = ID
 
 	param := map[string]string{
 		"origins":      origin,
@@ -18,7 +20,7 @@ func GetDistanceBetweenTwoLocations(ctx context.Context, origin, destination str
 
 	err := Get(ctx, extraURL, param, &distance)
 	if err != nil {
-		return models.DistanceMatrix{}, nil
+		return DistanceMatrix{}, nil
 	}
 
 	return distance, nil

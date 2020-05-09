@@ -1,8 +1,11 @@
-package models
+package maps
+
+import uuid "github.com/satori/go.uuid"
 
 type DistanceMatrix struct {
-	DestinationAddresses []string `json:"destination_addresses"`
-	OriginAddresses      []string `json:"origin_addresses"`
+	ID                   uuid.UUID `json:"id"`
+	DestinationAddresses []string  `json:"destination_addresses"`
+	OriginAddresses      []string  `json:"origin_addresses"`
 	Rows                 []struct {
 		Elements []struct {
 			Distance struct {

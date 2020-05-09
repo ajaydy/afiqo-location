@@ -52,7 +52,7 @@ type (
 		Name        string    `json:"name" validate:"max=20,min=4,required"`
 		Address     string    `json:"address" validate:"omitempty"`
 		DateOfBirth time.Time `json:"date_of_birth" validate:"required"`
-		Gender      int       `json:"gender" validate:"max=1,min=0,required"`
+		Gender      int       `json:"gender" validate:"max=2,min=1,required"`
 		PhoneNo     string    `json:"phone_no" validate:"required"`
 		Email       string    `json:"email" validate:"email,required"`
 		Password    string    `json:"password" validate:"required"`

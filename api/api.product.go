@@ -24,9 +24,9 @@ type (
 	}
 
 	ProductAddParam struct {
+		SupplierID  uuid.UUID       `json:"supplier_id" validate:"required"`
 		CategoryID  uuid.UUID       `json:"category_id" validate:"required"`
 		Name        string          `json:"name" validate:"required"`
-		Stock       uint            `json:"stock" validate:"gte=0,required"`
 		Price       decimal.Decimal `json:"price" validate:"required"`
 		Description string          `json:"description" validate:"required"`
 	}
@@ -34,7 +34,6 @@ type (
 	ProductUpdateParam struct {
 		ID          uuid.UUID       `json:"id"`
 		Name        string          `json:"name" validate:"required"`
-		Stock       uint            `json:"stock" validate:"gte=0,required"`
 		Price       decimal.Decimal `json:"price" validate:"required"`
 		Description string          `json:"description" validate:"required"`
 	}
@@ -97,10 +96,10 @@ func (s ProductModule) List(ctx context.Context, filter helpers.Filter) (interfa
 func (s ProductModule) Add(ctx context.Context, param ProductAddParam) (interface{}, *helpers.Error) {
 
 	product := models.ProductModel{
-		SupplierID:  uuid.FromStringOrNil(ctx.Value("user_id").(string)),
+		SupplierID:  param.SupplierID,
 		CategoryID:  param.CategoryID,
 		Name:        param.Name,
-		Stock:       param.Stock,
+		Stock:       0,
 		Price:       param.Price,
 		Description: param.Description,
 		CreatedBy:   uuid.FromStringOrNil(ctx.Value("user_id").(string)),
@@ -126,7 +125,6 @@ func (s ProductModule) Update(ctx context.Context, param ProductUpdateParam) (in
 	product := models.ProductModel{
 		ID:          param.ID,
 		Name:        param.Name,
-		Stock:       param.Stock,
 		Price:       param.Price,
 		Description: param.Description,
 		UpdatedBy: uuid.NullUUID{

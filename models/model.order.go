@@ -16,8 +16,11 @@ type (
 	OrderModel struct {
 		ID               uuid.UUID
 		CustomerID       uuid.UUID
+		WarehouseID      uuid.UUID
 		DeliveryDatetime time.Time
 		DeliveryAddress  string
+		Latitude         decimal.Decimal
+		Longitude        decimal.Decimal
 		Status           int
 		TotalPrice       decimal.Decimal
 		IsDelete         bool
@@ -28,17 +31,20 @@ type (
 	}
 
 	OrderResponse struct {
-		ID               uuid.UUID        `json:"id"`
-		Customer         CustomerResponse `json:"customer"`
-		DeliveryDatetime time.Time        `json:"delivery_datetime"`
-		DeliveryAddress  string           `json:"delivery_address"`
-		Status           int              `json:"status"`
-		TotalPrice       decimal.Decimal  `json:"total_price"`
-		IsDelete         bool             `json:"is_delete"`
-		CreatedBy        uuid.UUID        `json:"created_by"`
-		CreatedAt        time.Time        `json:"created_at"`
-		UpdatedBy        uuid.UUID        `json:"updated_by"`
-		UpdatedAt        time.Time        `json:"updated_at"`
+		ID               uuid.UUID         `json:"id"`
+		Customer         CustomerResponse  `json:"customer"`
+		Warehouse        WarehouseResponse `json:"warehouse"`
+		DeliveryDatetime time.Time         `json:"delivery_datetime"`
+		DeliveryAddress  string            `json:"delivery_address"`
+		Latitude         decimal.Decimal   `json:"latitude"`
+		Longitude        decimal.Decimal   `json:"longitude"`
+		Status           int               `json:"status"`
+		TotalPrice       decimal.Decimal   `json:"total_price"`
+		IsDelete         bool              `json:"is_delete"`
+		CreatedBy        uuid.UUID         `json:"created_by"`
+		CreatedAt        time.Time         `json:"created_at"`
+		UpdatedBy        uuid.UUID         `json:"updated_by"`
+		UpdatedAt        time.Time         `json:"updated_at"`
 	}
 )
 
@@ -50,11 +56,20 @@ func (s OrderModel) Response(ctx context.Context, db *sql.DB, logger *helpers.Lo
 		return OrderResponse{}, nil
 	}
 
+	warehouse, err := GetOneWarehouse(ctx, db, s.WarehouseID)
+	if err != nil {
+		logger.Err.Printf(`model.order.go/GetOneWarehouse/%v`, err)
+		return OrderResponse{}, nil
+	}
+
 	return OrderResponse{
 		ID:               s.ID,
 		Customer:         customer.Response(),
+		Warehouse:        warehouse.Response(),
 		DeliveryDatetime: s.DeliveryDatetime,
 		DeliveryAddress:  s.DeliveryAddress,
+		Longitude:        s.Longitude,
+		Latitude:         s.Latitude,
 		Status:           s.Status,
 		TotalPrice:       s.TotalPrice,
 		IsDelete:         s.IsDelete,
@@ -71,9 +86,12 @@ func GetOneOrder(ctx context.Context, db *sql.DB, orderID uuid.UUID) (OrderModel
 	query := fmt.Sprintf(`
 		SELECT
 			id,
+			warehouse_id,
 			customer_id,
 			delivery_datetime,
 			delivery_address,
+			latitude,
+			longitude,
 			status,
 			total_price
 			is_delete,
@@ -89,9 +107,12 @@ func GetOneOrder(ctx context.Context, db *sql.DB, orderID uuid.UUID) (OrderModel
 	var order OrderModel
 	err := db.QueryRowContext(ctx, query, orderID).Scan(
 		&order.ID,
+		&order.WarehouseID,
 		&order.CustomerID,
 		&order.DeliveryDatetime,
 		&order.DeliveryAddress,
+		&order.Latitude,
+		&order.Longitude,
 		&order.Status,
 		&order.TotalPrice,
 		&order.IsDelete,
@@ -119,6 +140,12 @@ func GetAllOrder(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]Orde
 			filter.CustomerID))
 	}
 
+	if filter.WarehouseID != uuid.Nil {
+		filters = append(filters, fmt.Sprintf(`
+			warehouse_id = '%s'`,
+			filter.WarehouseID))
+	}
+
 	filterJoin := strings.Join(filters, " AND ")
 	if filterJoin != "" {
 		filterJoin = fmt.Sprintf("AND %s", filterJoin)
@@ -127,9 +154,12 @@ func GetAllOrder(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]Orde
 	query := fmt.Sprintf(`
 		SELECT
 			id,
+			warehouse_id,
 			customer_id,
 			delivery_datetime,
 			delivery_address,
+			latitude,
+			longitude,
 			status,
 			total_price,
 			is_delete,
@@ -137,11 +167,10 @@ func GetAllOrder(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]Orde
 			created_at,
 			updated_by,
 			updated_at
-		FROM order
+		FROM "order"
 		WHERE is_delete = false
 		%s
-		ORDER BY name  %s
-		LIMIT $1 OFFSET $2`, filterJoin, filter.Dir)
+		LIMIT $1 OFFSET $2`, filterJoin)
 
 	rows, err := db.QueryContext(ctx, query, filter.Limit, filter.Offset)
 
@@ -157,9 +186,12 @@ func GetAllOrder(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]Orde
 
 		rows.Scan(
 			&order.ID,
+			&order.WarehouseID,
 			&order.CustomerID,
 			&order.DeliveryDatetime,
 			&order.DeliveryAddress,
+			&order.Latitude,
+			&order.Longitude,
 			&order.Status,
 			&order.TotalPrice,
 			&order.IsDelete,
@@ -179,20 +211,24 @@ func GetAllOrder(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]Orde
 func (s *OrderModel) Insert(ctx context.Context, db *sql.DB) error {
 
 	query := fmt.Sprintf(`
-		INSERT INTO order(
+		INSERT INTO "order"(
+			warehouse_id,
 			customer_id,
 			delivery_datetime,
 			delivery_address,
+			latitude,
+			longitude,
 			status,
 			total_price,
 			created_by,
 			created_at)
 		VALUES(
-		$1,$2,$3,$4,$5,now())
+		$1,$2,$3,$4,$5,$6,$7,$8,$9,now())
 		RETURNING id, created_at,is_delete`)
 
 	err := db.QueryRowContext(ctx, query,
-		s.CustomerID, s.DeliveryDatetime, s.DeliveryAddress, s.Status, s.TotalPrice, s.CreatedBy).Scan(
+		s.WarehouseID, s.CustomerID, s.DeliveryDatetime, s.DeliveryAddress, s.Latitude, s.Longitude, s.Status, s.TotalPrice,
+		s.CreatedBy).Scan(
 		&s.ID, &s.CreatedAt, &s.IsDelete,
 	)
 
@@ -231,16 +267,16 @@ func (s *OrderModel) UpdateStatus(ctx context.Context, db *sql.DB) error {
 func (s *OrderModel) UpdatePrice(ctx context.Context, db *sql.DB) error {
 
 	query := fmt.Sprintf(`
-		UPDATE order
+		UPDATE "order"
 		SET
-			total_price =$ 1,
+			total_price=$1,
 			updated_at=NOW(),
 			updated_by=$2
 		WHERE id=$3
 		RETURNING id,created_at,updated_at,created_by`)
 
 	err := db.QueryRowContext(ctx, query,
-		s.Status, s.UpdatedBy, s.ID).Scan(
+		s.TotalPrice, s.UpdatedBy, s.ID).Scan(
 		&s.ID, &s.CreatedAt, &s.UpdatedAt, &s.CreatedBy,
 	)
 

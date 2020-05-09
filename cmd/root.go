@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"afiqo-location/api"
+	email2 "afiqo-location/email"
 	"afiqo-location/helpers"
 	maps2 "afiqo-location/maps"
 	"afiqo-location/middleware"
@@ -52,6 +53,7 @@ var rootCmd = &cobra.Command{
 		initCache()
 		initLogger()
 		initMaps()
+		initMail()
 		api.Init(dbPool, cachePool, logger)
 		helpers.Init(logger, cachePool)
 		routers.Init(dbPool, cachePool, logger)
@@ -194,7 +196,15 @@ func initMaps() {
 		URL:    viper.GetString("maps.distance_url"),
 		ApiKey: viper.GetString("maps.api_key"),
 	}
-
 	maps2.Init(maps)
+}
 
+func initMail() {
+	mail := email2.MailService{
+		Host:     viper.GetString("mail.host"),
+		Port:     viper.GetInt("mail.port"),
+		Email:    viper.GetString("mail.email"),
+		Password: viper.GetString("mail.password"),
+	}
+	mail.Init()
 }

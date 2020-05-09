@@ -23,9 +23,14 @@ type (
 	}
 
 	StockAddParam struct {
-		WarehouseID uuid.UUID `json:"warehouse_id"`
-		ProductID   uuid.UUID `json:"product_id"`
-		Stock       uint      `json:"stock"`
+		WarehouseID uuid.UUID `json:"warehouse_id" validate:"required"`
+		ProductID   uuid.UUID `json:"product_id" validate:"required"`
+		Stock       uint      `json:"stock" validate:"required"`
+	}
+
+	StockUpdateParam struct {
+		ID    uuid.UUID `json:"id"`
+		Stock uint      `json:"stock" validate:"required"`
 	}
 )
 
@@ -97,14 +102,16 @@ func (s StockModule) Add(ctx context.Context, param StockAddParam) (interface{},
 			http.StatusInternalServerError)
 	}
 
-	product, err := models.GetOneProduct(ctx, s.db, stock.ProductID)
-
+	stocks, err := models.GetAllStockByProductID(ctx, s.db, stock.ProductID)
 	if err != nil {
-		return nil, helpers.ErrorWrap(err, s.name, "Add/GetOneProduct", helpers.InternalServerError,
+		return nil, helpers.ErrorWrap(err, s.name, "Add/GetAllStockByProductID", helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 
-	totalStock := product.Stock + param.Stock
+	var totalStock uint
+	for _, stock = range stocks {
+		totalStock = totalStock + stock.Stock
+	}
 
 	productStock := models.ProductModel{
 		ID:    stock.ProductID,
@@ -125,6 +132,67 @@ func (s StockModule) Add(ctx context.Context, param StockAddParam) (interface{},
 	response, err := stock.Response(ctx, s.db, s.logger)
 	if err != nil {
 		return nil, helpers.ErrorWrap(err, s.name, "Add/Response", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	return response, nil
+
+}
+
+func (s StockModule) Update(ctx context.Context, param StockUpdateParam) (interface{}, *helpers.Error) {
+
+	stock := models.StockModel{
+		ID:    param.ID,
+		Stock: param.Stock,
+		UpdatedBy: uuid.NullUUID{
+			UUID:  uuid.FromStringOrNil(ctx.Value("user_id").(string)),
+			Valid: true,
+		},
+	}
+
+	err := stock.Update(ctx, s.db)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Update/Insert", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	stock, err = models.GetOneStock(ctx, s.db, stock.ID)
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Update/GetOneStock", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	stocks, err := models.GetAllStockByProductID(ctx, s.db, stock.ProductID)
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Update/GetAllStockByProductID", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	var totalStock uint
+	for _, stock = range stocks {
+		totalStock = totalStock + stock.Stock
+	}
+
+	productStock := models.ProductModel{
+		ID:    stock.ProductID,
+		Stock: totalStock,
+		UpdatedBy: uuid.NullUUID{
+			UUID:  uuid.FromStringOrNil(ctx.Value("user_id").(string)),
+			Valid: true,
+		},
+	}
+
+	err = productStock.StockUpdate(ctx, s.db)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Update/StockUpdate", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	response, err := stock.Response(ctx, s.db, s.logger)
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Update/Response", helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 

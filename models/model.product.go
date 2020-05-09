@@ -253,7 +253,7 @@ func (s *ProductModel) StockUpdate(ctx context.Context, db *sql.DB) error {
 	query := fmt.Sprintf(`
 		UPDATE product
 		SET
-			stock=$1
+			stock=$1,
 			updated_at=NOW(),
 			updated_by=$2
 		WHERE id=$3

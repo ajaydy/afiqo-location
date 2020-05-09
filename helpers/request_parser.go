@@ -7,6 +7,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/schema"
 	uuid "github.com/satori/go.uuid"
+	"github.com/shopspring/decimal"
 	"html"
 	"net/http"
 	"reflect"
@@ -26,13 +27,16 @@ type (
 
 	Filter struct {
 		FilterOption `json:"filter,omitempty"`
-		SupplierID   uuid.UUID `json:"supplier_id" schema:"supplier_id"`
-		CategoryID   uuid.UUID `json:"category_id" schema:"category_id"`
-		CustomerID   uuid.UUID `json:"customer_id" schema:"customer_id"`
-		CourierID    uuid.UUID `json:"courier_id" schema:"courier_id"`
-		OrderID      uuid.UUID `json:"order_id" schema:"order_id"`
-		ProductID    uuid.UUID `json:"product_id" schema:"product_id"`
-		WarehouseID  uuid.UUID `json:"warehouse_id" schema:"warehouse_id"`
+		ID           uuid.UUID       `json:"id" schema:"id"`
+		Longitude    decimal.Decimal `json:"longitude" schema:"longitude"`
+		Latitude     decimal.Decimal `json:"latitude" schema:"latitude"`
+		SupplierID   uuid.UUID       `json:"supplier_id" schema:"supplier_id"`
+		CategoryID   uuid.UUID       `json:"category_id" schema:"category_id"`
+		CustomerID   uuid.UUID       `json:"customer_id" schema:"customer_id"`
+		CourierID    uuid.UUID       `json:"courier_id" schema:"courier_id"`
+		OrderID      uuid.UUID       `json:"order_id" schema:"order_id"`
+		ProductID    uuid.UUID       `json:"product_id" schema:"product_id"`
+		WarehouseID  uuid.UUID       `json:"warehouse_id" schema:"warehouse_id"`
 	}
 )
 

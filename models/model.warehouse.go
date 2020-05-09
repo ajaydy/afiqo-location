@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/lib/pq"
 	uuid "github.com/satori/go.uuid"
+	"github.com/shopspring/decimal"
 	"time"
 )
 
@@ -15,6 +16,8 @@ type (
 		ID        uuid.UUID
 		Name      string
 		Address   string
+		Latitude  decimal.Decimal
+		Longitude decimal.Decimal
 		PhoneNo   string
 		IsDelete  bool
 		CreatedBy uuid.UUID
@@ -24,15 +27,17 @@ type (
 	}
 
 	WarehouseResponse struct {
-		ID        uuid.UUID `json:"id"`
-		Name      string    `json:"name"`
-		Address   string    `json:"address"`
-		PhoneNo   string    `json:"phone_no"`
-		IsDelete  bool      `json:"is_delete"`
-		CreatedBy uuid.UUID `json:"created_by"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedBy uuid.UUID `json:"updated_by"`
-		UpdatedAt time.Time `json:"updated_at"`
+		ID        uuid.UUID       `json:"id"`
+		Name      string          `json:"name"`
+		Address   string          `json:"address"`
+		Latitude  decimal.Decimal `json:"latitude"`
+		Longitude decimal.Decimal `json:"longitude"`
+		PhoneNo   string          `json:"phone_no"`
+		IsDelete  bool            `json:"is_delete"`
+		CreatedBy uuid.UUID       `json:"created_by"`
+		CreatedAt time.Time       `json:"created_at"`
+		UpdatedBy uuid.UUID       `json:"updated_by"`
+		UpdatedAt time.Time       `json:"updated_at"`
 	}
 )
 
@@ -41,6 +46,8 @@ func (s WarehouseModel) Response() WarehouseResponse {
 		ID:        s.ID,
 		Name:      s.Name,
 		Address:   s.Address,
+		Latitude:  s.Latitude,
+		Longitude: s.Longitude,
 		PhoneNo:   s.PhoneNo,
 		IsDelete:  s.IsDelete,
 		CreatedBy: s.CreatedBy,
@@ -57,6 +64,8 @@ func GetOneWarehouse(ctx context.Context, db *sql.DB, warehouseID uuid.UUID) (Wa
 			id,
 			name,
 			address,
+			latitude,
+			longitude,
 			phone_no,
 			is_delete,
 			created_by,
@@ -73,6 +82,8 @@ func GetOneWarehouse(ctx context.Context, db *sql.DB, warehouseID uuid.UUID) (Wa
 		&warehouse.ID,
 		&warehouse.Name,
 		&warehouse.Address,
+		&warehouse.Latitude,
+		&warehouse.Longitude,
 		&warehouse.PhoneNo,
 		&warehouse.IsDelete,
 		&warehouse.CreatedBy,
@@ -89,6 +100,64 @@ func GetOneWarehouse(ctx context.Context, db *sql.DB, warehouseID uuid.UUID) (Wa
 
 }
 
+func GetAllWarehouseWithDistance(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]WarehouseModel, error) {
+
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			name,
+			address,
+			latitude,
+			longitude,
+			phone_no,
+			is_delete,
+			created_by,
+			created_at,
+			updated_by,
+			updated_at,
+			SQRT(
+				POW(69.1 * (latitude::FLOAT8 - $1), 2) +
+				POW(69.1 * ($2 - longitude::FLOAT8) * COS(latitude::FLOAT8 / 57.3), 2)) AS distance  
+		FROM warehouse
+		ORDER BY distance
+		LIMIT $3 OFFSET $4`)
+
+	rows, err := db.QueryContext(ctx, query, filter.Latitude, filter.Longitude, filter.Limit, filter.Offset)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var warehouses []WarehouseModel
+	for rows.Next() {
+		var warehouse WarehouseModel
+		var distance decimal.Decimal
+
+		rows.Scan(
+			&warehouse.ID,
+			&warehouse.Name,
+			&warehouse.Address,
+			&warehouse.Latitude,
+			&warehouse.Longitude,
+			&warehouse.PhoneNo,
+			&warehouse.IsDelete,
+			&warehouse.CreatedBy,
+			&warehouse.CreatedAt,
+			&warehouse.UpdatedBy,
+			&warehouse.UpdatedAt,
+			&distance,
+		)
+
+		warehouses = append(warehouses, warehouse)
+
+	}
+
+	return warehouses, nil
+
+}
+
 func GetAllWarehouse(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]WarehouseModel, error) {
 
 	var searchQuery string
@@ -102,6 +171,8 @@ func GetAllWarehouse(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]
 			id,
 			name,
 			address,
+			latitude,
+			longitude,
 			phone_no,
 			is_delete,
 			created_by,
@@ -129,6 +200,8 @@ func GetAllWarehouse(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]
 			&warehouse.ID,
 			&warehouse.Name,
 			&warehouse.Address,
+			&warehouse.Latitude,
+			&warehouse.Longitude,
 			&warehouse.PhoneNo,
 			&warehouse.IsDelete,
 			&warehouse.CreatedBy,
@@ -150,15 +223,17 @@ func (s *WarehouseModel) Insert(ctx context.Context, db *sql.DB) error {
 		INSERT INTO warehouse(
 			name,
 			address,
+			latitude,
+			longitude,
 			phone_no,
 			created_by,
 			created_at)
 		VALUES(
-		$1,$2,$3,$4,now())
+		$1,$2,$3,$4,$5,$6,now())
 		RETURNING id, created_at`)
 
 	err := db.QueryRowContext(ctx, query,
-		s.Name, s.Address, s.PhoneNo, s.CreatedBy).Scan(
+		s.Name, s.Address, s.Latitude, s.Longitude, s.PhoneNo, s.CreatedBy).Scan(
 		&s.ID, &s.CreatedAt,
 	)
 
@@ -177,14 +252,16 @@ func (s *WarehouseModel) Update(ctx context.Context, db *sql.DB) error {
 		SET
 			name=$1,
 			address=$2,
-			phone_no=$3,
+			latitude=$3,
+			longitude=$4,
+			phone_no=$5,
 			updated_at=NOW(),
-			updated_by=$4
-		WHERE id=$5
+			updated_by=$6
+		WHERE id=$7
 		RETURNING id,created_at,updated_at,created_by`)
 
 	err := db.QueryRowContext(ctx, query,
-		s.Name, s.Address, s.PhoneNo, s.UpdatedBy, s.ID).Scan(
+		s.Name, s.Address, s.Latitude, s.Longitude, s.PhoneNo, s.UpdatedBy, s.ID).Scan(
 		&s.ID, &s.CreatedAt, &s.UpdatedAt, &s.CreatedBy,
 	)
 

@@ -58,6 +58,8 @@ func InitHandlers() *mux.Router {
 		HandlerFunc(HandlerSupplierList))).Methods(http.MethodGet)
 	apiV1.Handle("/suppliers/{id}", middleware.SessionMiddleware(
 		HandlerFunc(HandlerSupplierDetail))).Methods(http.MethodGet)
+	apiV1.Handle("/suppliers", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerSupplierAdd), session.ADMIN_ROLE))).Methods(http.MethodPost)
 	apiV1.Handle("/suppliers/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerSupplierUpdate), session.SUPPLIER_ROLE))).Methods(http.MethodPut)
 	apiV1.Handle("/suppliers/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
@@ -96,9 +98,9 @@ func InitHandlers() *mux.Router {
 	apiV1.Handle("/products/{id}", middleware.SessionMiddleware(
 		HandlerFunc(HandlerProductDetail))).Methods(http.MethodGet)
 	apiV1.Handle("/products", middleware.SessionMiddleware(middleware.RolesMiddleware(
-		HandlerFunc(HandlerProductAdd), session.SUPPLIER_ROLE))).Methods(http.MethodPost)
+		HandlerFunc(HandlerProductAdd), session.ADMIN_ROLE))).Methods(http.MethodPost)
 	apiV1.Handle("/products/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
-		HandlerFunc(HandlerProductUpdate), session.SUPPLIER_ROLE))).Methods(http.MethodPut)
+		HandlerFunc(HandlerProductUpdate), session.ADMIN_ROLE))).Methods(http.MethodPut)
 	apiV1.Handle("/products/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerProductDelete), session.ADMIN_ROLE, session.SUPPLIER_ROLE))).Methods(http.MethodDelete)
 
@@ -126,10 +128,10 @@ func InitHandlers() *mux.Router {
 		HandlerFunc(HandlerShipmentDetail))).Methods(http.MethodGet)
 	apiV1.Handle("/shipments", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerShipmentAdd), session.ADMIN_ROLE))).Methods(http.MethodPost)
-	apiV1.Handle("/shipments/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
-		HandlerFunc(HandlerShipmentUpdate), session.ADMIN_ROLE))).Methods(http.MethodPut)
-	apiV1.Handle("/shipments/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
-		HandlerFunc(HandlerShipmentDelete), session.ADMIN_ROLE))).Methods(http.MethodDelete)
+	//apiV1.Handle("/shipments/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
+	//	HandlerFunc(HandlerShipmentUpdate), session.ADMIN_ROLE))).Methods(http.MethodPut)
+	//apiV1.Handle("/shipments/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
+	//	HandlerFunc(HandlerShipmentDelete), session.ADMIN_ROLE))).Methods(http.MethodDelete)
 
 	apiV1.Handle("/orders", middleware.SessionMiddleware(
 		HandlerFunc(HandlerOrderList))).Methods(http.MethodGet)
@@ -146,6 +148,8 @@ func InitHandlers() *mux.Router {
 		HandlerFunc(HandlerStockDetail))).Methods(http.MethodGet)
 	apiV1.Handle("/stocks", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerStockAdd), session.ADMIN_ROLE))).Methods(http.MethodPost)
+	apiV1.Handle("/stocks/{id}", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerStockUpdate), session.ADMIN_ROLE))).Methods(http.MethodPut)
 
 	apiV1.Handle("/order-products", middleware.SessionMiddleware(
 		HandlerFunc(HandlerOrderProductList))).Methods(http.MethodGet)

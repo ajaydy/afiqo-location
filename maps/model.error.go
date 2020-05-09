@@ -1,4 +1,4 @@
-package models
+package maps
 
 type ErrorModel struct {
 	Error struct {

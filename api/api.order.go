@@ -2,11 +2,10 @@ package api
 
 import (
 	"afiqo-location/helpers"
-	"afiqo-location/maps"
 	"afiqo-location/models"
-	"afiqo-location/util"
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/gomodule/redigo/redis"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
@@ -18,6 +17,11 @@ type (
 	Product struct {
 		ID       uuid.UUID `json:"id"`
 		Quantity uint      `json:"quantity"`
+	}
+
+	Distance struct {
+		WarehouseID   uuid.UUID
+		DistanceValue int
 	}
 
 	OrderModule struct {
@@ -32,9 +36,10 @@ type (
 	}
 
 	OrderParam struct {
-		DeliveryAddress  string    `json:"delivery_address"`
-		DeliveryDatetime time.Time `json:"delivery_datetime"`
-		Product          []Product `json:"product"`
+		DeliveryAddress string          `json:"delivery_address" validate:"required"`
+		Longitude       decimal.Decimal `json:"longitude" validate:"required"`
+		Latitude        decimal.Decimal `json:"latitude" validate:"required"`
+		Product         []Product       `json:"product" validate:"required"`
 	}
 
 	OrderDeleteParam struct {
@@ -94,103 +99,88 @@ func (s OrderModule) List(ctx context.Context, filter helpers.Filter) (interface
 
 func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, *helpers.Error) {
 
+	now := time.Now()
+
+	deliveryDateTime := now.AddDate(0, 0, 3)
+
+	warehouses, err := models.GetAllWarehouseWithDistance(ctx, s.db, helpers.Filter{
+		FilterOption: helpers.FilterOption{
+			Limit:  1,
+			Offset: 0,
+		},
+		Longitude: param.Longitude,
+		Latitude:  param.Latitude,
+	})
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Order/GetAllWarehouseWithDistance", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	var warehouseID uuid.UUID
+	for _, warehouse := range warehouses {
+		warehouseID = warehouse.ID
+	}
+
 	order := models.OrderModel{
 		CustomerID:       uuid.FromStringOrNil(ctx.Value("user_id").(string)),
-		DeliveryDatetime: param.DeliveryDatetime,
+		WarehouseID:      warehouseID,
+		DeliveryDatetime: deliveryDateTime,
 		DeliveryAddress:  param.DeliveryAddress,
+		Longitude:        param.Longitude,
+		Latitude:         param.Latitude,
 		Status:           0,
-		TotalPrice:       decimal.NewFromFloat(0.00),
 		CreatedBy:        uuid.FromStringOrNil(ctx.Value("user_id").(string)),
 	}
 
-	err := order.Insert(ctx, s.db)
-
+	err = order.Insert(ctx, s.db)
 	if err != nil {
-		return nil, helpers.ErrorWrap(err, s.name, "Order/order.Insert", helpers.InternalServerError,
+		return nil, helpers.ErrorWrap(err, s.name, "Order/order.Insert",
+			helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 
 	for _, orderProduct := range param.Product {
 
-		product, err := models.GetOneProduct(ctx, s.db, orderProduct.ID)
-
+		stock, err := models.GetOneStockByProductAndWarehouse(ctx, s.db, warehouseID, orderProduct.ID)
 		if err != nil {
-			return nil, helpers.ErrorWrap(err, s.name, "Order/GetOneProduct", helpers.InternalServerError,
+			return nil, helpers.ErrorWrap(err, s.name, "Order/GetOneStockByProductAndWarehouse",
+				helpers.InternalServerError,
 				http.StatusInternalServerError)
 		}
 
-		stocks, err := models.GetAllStock(ctx, s.db, helpers.Filter{
-			FilterOption: helpers.FilterOption{
-				Limit:  999,
-				Offset: 0,
+		subStock := stock.Stock - orderProduct.Quantity
+
+		stockModel := models.StockModel{
+			ID:    stock.ID,
+			Stock: subStock,
+			UpdatedBy: uuid.NullUUID{
+				UUID:  uuid.FromStringOrNil(ctx.Value("user_id").(string)),
+				Valid: true,
 			},
-			ProductID: product.ID,
-		})
+		}
+
+		err = stockModel.Update(ctx, s.db)
 
 		if err != nil {
-			return nil, helpers.ErrorWrap(err, s.name, "Order/GetAllStock", helpers.InternalServerError,
+			return nil, helpers.ErrorWrap(err, s.name, "Order/stockModel.Update",
+				helpers.InternalServerError,
 				http.StatusInternalServerError)
 		}
 
-		var warehouses []models.WarehouseModel
-		for _, stock := range stocks {
-
-			warehouse, err := models.GetOneWarehouse(ctx, s.db, stock.WarehouseID)
-
-			if err != nil {
-				return nil, helpers.ErrorWrap(err, s.name, "Order/GetOneWarehouse", helpers.InternalServerError,
-					http.StatusInternalServerError)
-			}
-
-			warehouses = append(warehouses, warehouse)
-
-		}
-
-		var distanceArray []int
-		for _, warehouse := range warehouses {
-
-			distanceMatrix, err := maps.GetDistanceBetweenTwoLocations(ctx, warehouse.Address, order.DeliveryAddress)
-			if err != nil {
-				return nil, helpers.ErrorWrap(err, s.name, "Order/maps.GetDistanceBetweenTwoLocations",
-					helpers.InternalServerError,
-					http.StatusInternalServerError)
-			}
-
-			distance := distanceMatrix.Rows[0].Elements[0].Distance.Value
-			distanceArray = append(distanceArray, distance)
-		}
-
-		minimum := util.GetMinDistance(distanceArray) / 1e3
-
-		configuration, err := models.GetConfiguration(ctx, s.db)
+		stocks, err := models.GetAllStockByProductID(ctx, s.db, stock.ProductID)
 		if err != nil {
-			return nil, helpers.ErrorWrap(err, s.name, "Order/GetConfiguration", helpers.InternalServerError,
+			return nil, helpers.ErrorWrap(err, s.name, "Add/GetAllStockByProductID", helpers.InternalServerError,
 				http.StatusInternalServerError)
 		}
 
-		deliveryFee := configuration.DeliveryFee.Mul(decimal.NewFromInt(int64(minimum)))
-
-		subtotal := decimal.Sum(product.Price.Mul(decimal.NewFromInt(int64(orderProduct.Quantity))),
-			deliveryFee)
-
-		orderProduct := models.OrderProductModel{
-			OrderID:   order.ID,
-			ProductID: orderProduct.ID,
-			Quantity:  orderProduct.Quantity,
-			SubTotal:  subtotal,
-			CreatedBy: uuid.FromStringOrNil(ctx.Value("user_id").(string)),
+		var totalStock uint
+		for _, stock = range stocks {
+			totalStock = totalStock + stock.Stock
 		}
-
-		err = orderProduct.Insert(ctx, s.db)
-		if err != nil {
-			return nil, helpers.ErrorWrap(err, s.name, "Order/orderProduct.Insert", helpers.InternalServerError,
-				http.StatusInternalServerError)
-		}
-
-		totalStock := product.Stock - orderProduct.Quantity
 
 		productStock := models.ProductModel{
-			ID:    product.ID,
+			ID:    stock.ProductID,
 			Stock: totalStock,
 			UpdatedBy: uuid.NullUUID{
 				UUID:  uuid.FromStringOrNil(ctx.Value("user_id").(string)),
@@ -199,11 +189,36 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 		}
 
 		err = productStock.StockUpdate(ctx, s.db)
+
 		if err != nil {
-			return nil, helpers.ErrorWrap(err, s.name, "Order/productStock.StockUpdate", helpers.InternalServerError,
+			return nil, helpers.ErrorWrap(err, s.name, "Add/StockUpdate", helpers.InternalServerError,
 				http.StatusInternalServerError)
 		}
 
+		product, err := models.GetOneProduct(ctx, s.db, orderProduct.ID)
+
+		if err != nil {
+			return nil, helpers.ErrorWrap(err, s.name, "Order/GetOneProduct",
+				helpers.InternalServerError,
+				http.StatusInternalServerError)
+		}
+
+		subTotal := product.Price.Mul(decimal.NewFromInt(int64(orderProduct.Quantity)))
+
+		orderProduct := models.OrderProductModel{
+			OrderID:   order.ID,
+			ProductID: orderProduct.ID,
+			Quantity:  orderProduct.Quantity,
+			SubTotal:  subTotal,
+			CreatedBy: uuid.FromStringOrNil(ctx.Value("user_id").(string)),
+		}
+
+		err = orderProduct.Insert(ctx, s.db)
+		if err != nil {
+			return nil, helpers.ErrorWrap(err, s.name, "Order/orderProduct.Insert",
+				helpers.InternalServerError,
+				http.StatusInternalServerError)
+		}
 	}
 
 	orderProducts, err := models.GetAllOrderProduct(ctx, s.db, helpers.Filter{
@@ -224,24 +239,29 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 		totalPrice = decimal.Sum(totalPrice, orderProduct.SubTotal)
 	}
 
+	configuration, err := models.GetConfiguration(ctx, s.db)
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Order/GetConfiguration", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	fmt.Println(totalPrice)
+
 	orderUpdate := models.OrderModel{
 		ID:         order.ID,
-		TotalPrice: totalPrice,
+		TotalPrice: totalPrice.Add(configuration.DeliveryFee),
 		UpdatedBy: uuid.NullUUID{
 			UUID:  uuid.FromStringOrNil(ctx.Value("user_id").(string)),
 			Valid: true,
 		},
 	}
+
+	fmt.Println(orderUpdate.TotalPrice)
+	fmt.Println(order.ID)
 	err = orderUpdate.UpdatePrice(ctx, s.db)
 
 	if err != nil {
 		return nil, helpers.ErrorWrap(err, s.name, "Order/UpdatePrice", helpers.InternalServerError,
-			http.StatusInternalServerError)
-	}
-
-	order, err = models.GetOneOrder(ctx, s.db, order.ID)
-	if err != nil {
-		return nil, helpers.ErrorWrap(err, s.name, "Order/GetOneOrder", helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 

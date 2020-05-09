@@ -93,7 +93,7 @@ func (s AdminModule) PasswordUpdate(ctx context.Context, param PasswordUpdatePar
 	if err != nil {
 		return nil, helpers.ErrorWrap(errors.New("Current Password Is Incorrect!"), s.name,
 			"PasswordUpdate/CompareHashAndPassword",
-			helpers.IncorrectPasswordMessage,
+			helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 
