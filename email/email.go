@@ -29,12 +29,18 @@ type Action struct {
 	Button       Button
 }
 
+type Entry struct {
+	Key   string
+	Value string
+}
+
 type MailData struct {
 	Name    string
 	Intros  []string
 	Actions []Action
 	Outros  []string
 	Header  Product
+	Entry   [][]Entry
 }
 
 func (b MailData) Generate() (string, error) {
@@ -44,7 +50,7 @@ func (b MailData) Generate() (string, error) {
 			Name:        "Afiqo",
 			Copyright:   "Copyright © 2020 Afiqo-Location. All rights reserved.",
 			Logo:        "http://www.duchess-france.org/wp-content/uploads/2016/01/gopher.png",
-			TroubleText: "Feel free to contact us at +60123456789",
+			TroubleText: "Feel free to contact us at +60122872072",
 		},
 	}
 
@@ -108,6 +114,73 @@ func (b MailData) GenerateForPassword() (string, error) {
 				"Welcome to Afiqo-Location! We're very excited to have you on board.",
 			},
 			Actions: action,
+			Outros: []string{
+				"Need help, or have questions? Just reply to this email, we'd love to help.",
+			},
+		},
+	}
+
+	emailBody, err := header.GenerateHTML(emailTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	return emailBody, err
+}
+
+func (b MailData) GenerateForReceipt() (string, error) {
+
+	header := hermes.Hermes{
+		Product: hermes.Product{
+			Name:        "Afiqo",
+			Copyright:   "Copyright © 2020 Afiqo-Location. All rights reserved.",
+			Logo:        "http://www.duchess-france.org/wp-content/uploads/2016/01/gopher.png",
+			TroubleText: "Feel free to contact us at +60123456789",
+		},
+	}
+
+	var entries [][]hermes.Entry
+
+	for _, entry := range b.Entry {
+		var rows []hermes.Entry
+		for _, value := range entry {
+			row := hermes.Entry{
+				Key:   value.Key,
+				Value: value.Value,
+			}
+			rows = append(rows, row)
+		}
+		entries = append(entries, rows)
+	}
+
+	emailTemplate := hermes.Email{
+		Body: hermes.Body{
+			Name: b.Name,
+			Intros: []string{
+				"Your order is being processed.",
+			},
+
+			Table: hermes.Table{
+				Data: entries,
+				Columns: hermes.Columns{
+					CustomWidth: map[string]string{
+						"Item":     "15%",
+						"Price":    "15%",
+						"Subtotal": "15%",
+						"Quantity": "10%",
+					},
+					CustomAlignment: map[string]string{},
+				},
+			},
+
+			Actions: []hermes.Action{
+				{
+					Instructions: "You can check the status of your order and more in your dashboard:",
+					Button: hermes.Button{
+						Text: "Go to Dashboard",
+					},
+				},
+			},
 			Outros: []string{
 				"Need help, or have questions? Just reply to this email, we'd love to help.",
 			},

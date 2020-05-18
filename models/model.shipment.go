@@ -2,6 +2,7 @@ package models
 
 import (
 	"afiqo-location/helpers"
+	"afiqo-location/util"
 	"context"
 	"database/sql"
 	"fmt"
@@ -28,7 +29,7 @@ type (
 		ID        uuid.UUID       `json:"id"`
 		Courier   CourierResponse `json:"courier"`
 		Order     OrderResponse   `json:"order"`
-		Status    int             `json:"status"`
+		Status    string          `json:"status"`
 		IsDelete  bool            `json:"is_delete"`
 		CreatedBy uuid.UUID       `json:"created_by"`
 		CreatedAt time.Time       `json:"created_at"`
@@ -57,11 +58,13 @@ func (s ShipmentModel) Response(ctx context.Context, db *sql.DB, logger *helpers
 		return ShipmentResponse{}, nil
 	}
 
+	status := util.GetShipmentStatus(s.Status)
+
 	return ShipmentResponse{
 		ID:        s.ID,
 		Courier:   courier.Response(),
 		Order:     orderResponse,
-		Status:    s.Status,
+		Status:    status,
 		IsDelete:  s.IsDelete,
 		CreatedBy: s.CreatedBy,
 		CreatedAt: s.CreatedAt,
@@ -83,7 +86,8 @@ func GetOneShipment(ctx context.Context, db *sql.DB, shipmentID uuid.UUID) (Ship
 			created_at,
 			updated_by,
 			updated_at
-		FROM shipment
+		FROM 
+			shipment
 		WHERE 
 			id = $1
 	`)
@@ -141,12 +145,127 @@ func GetAllShipment(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]S
 			created_at,
 			updated_by,
 			updated_at
-		FROM shipment
-		WHERE is_delete = false
+		FROM 
+			shipment
+		WHERE 
+			is_delete = false
 		%s
-		LIMIT $1 OFFSET $2`, filterJoin)
+		LIMIT $1 OFFSET $2`,
+		filterJoin)
 
 	rows, err := db.QueryContext(ctx, query, filter.Limit, filter.Offset)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var shipments []ShipmentModel
+	for rows.Next() {
+		var shipment ShipmentModel
+
+		rows.Scan(
+			&shipment.ID,
+			&shipment.CourierID,
+			&shipment.OrderID,
+			&shipment.Status,
+			&shipment.IsDelete,
+			&shipment.CreatedBy,
+			&shipment.CreatedAt,
+			&shipment.UpdatedBy,
+			&shipment.UpdatedAt,
+		)
+
+		shipments = append(shipments, shipment)
+	}
+
+	return shipments, nil
+
+}
+
+func GetAllShipmentByCustomerID(ctx context.Context, db *sql.DB, filter helpers.Filter, customerID uuid.UUID) (
+	[]ShipmentModel, error) {
+
+	query := fmt.Sprintf(`
+		SELECT
+			s.id,
+			s.courier_id,
+			s.order_id,
+			s.status,
+			s.is_delete,
+			s.created_by,
+			s.created_at,
+			s.updated_by,
+			s.updated_at
+		FROM 
+			shipment s
+		INNER JOIN
+			"order" o
+		ON 
+			o.id = s.order_id
+		WHERE 
+			o.customer_id = $1
+		LIMIT $2 OFFSET $3
+	`)
+
+	rows, err := db.QueryContext(ctx, query, customerID, filter.Limit, filter.Offset)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var shipments []ShipmentModel
+	for rows.Next() {
+		var shipment ShipmentModel
+
+		rows.Scan(
+			&shipment.ID,
+			&shipment.CourierID,
+			&shipment.OrderID,
+			&shipment.Status,
+			&shipment.IsDelete,
+			&shipment.CreatedBy,
+			&shipment.CreatedAt,
+			&shipment.UpdatedBy,
+			&shipment.UpdatedAt,
+		)
+
+		shipments = append(shipments, shipment)
+	}
+
+	return shipments, nil
+
+}
+
+func GetAllShipmentByCourierID(ctx context.Context, db *sql.DB, filter helpers.Filter, courierID uuid.UUID) (
+	[]ShipmentModel, error) {
+
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			courier_id,
+			order_id,
+			status,
+			is_delete,
+			created_by,
+			created_at,
+			updated_by,
+			updated_at
+		FROM 
+			shipment
+		WHERE 
+			is_delete = false
+		AND 
+			courier_id = $1
+		ORDER BY
+			updated_at %s ,created_at %s
+		LIMIT $2 OFFSET $3`,
+		filter.Dir, filter.Dir)
+
+	rows, err := db.QueryContext(ctx, query, courierID, filter.Limit, filter.Offset)
 
 	if err != nil {
 		return nil, err
@@ -187,8 +306,10 @@ func (s *ShipmentModel) Insert(ctx context.Context, db *sql.DB) error {
 			created_by,
 			created_at)
 		VALUES(
-		$1,$2,$3,$4,now())
-		RETURNING id, created_at,is_delete`)
+			$1,$2,$3,$4,now())
+		RETURNING 
+			id, created_at,is_delete
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.CourierID, s.OrderID, s.Status, s.CreatedBy).Scan(
@@ -211,8 +332,11 @@ func (s *ShipmentModel) UpdateStatus(ctx context.Context, db *sql.DB) error {
 			status=$1,
 			updated_at=NOW(),
 			updated_by=$2
-		WHERE id=$3
-		RETURNING id,created_at,updated_at,created_by`)
+		WHERE 
+			id=$3
+		RETURNING 
+			id,created_at,updated_at,created_by
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.Status, s.UpdatedBy, s.ID).Scan(
@@ -234,7 +358,9 @@ func (s *ShipmentModel) Delete(ctx context.Context, db *sql.DB) error {
 			is_delete=true,
 			updated_by=$1,
 			updated_at=NOW()
-		WHERE id=$2`)
+		WHERE 
+			id=$2
+	`)
 
 	_, err := db.ExecContext(ctx, query,
 		s.UpdatedBy, s.ID)

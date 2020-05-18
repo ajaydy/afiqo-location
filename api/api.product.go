@@ -5,6 +5,7 @@ import (
 	"afiqo-location/models"
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/gomodule/redigo/redis"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
@@ -17,6 +18,15 @@ type (
 		cache  *redis.Pool
 		logger *helpers.Logger
 		name   string
+	}
+
+	SupplierDataParam struct {
+		ID uuid.UUID `json:"id"`
+	}
+
+	ForCustomerParam struct {
+		Longitude decimal.Decimal `json:"longitude" validate:"required"`
+		Latitude  decimal.Decimal `json:"latitude" validate:"required"`
 	}
 
 	ProductDetailParam struct {
@@ -84,6 +94,76 @@ func (s ProductModule) List(ctx context.Context, filter helpers.Filter) (interfa
 		response, err := product.Response(ctx, s.db, s.logger)
 		if err != nil {
 			return nil, helpers.ErrorWrap(err, s.name, "List/Response", helpers.InternalServerError,
+				http.StatusInternalServerError)
+		}
+
+		productResponse = append(productResponse, response)
+	}
+
+	return productResponse, nil
+}
+
+func (s ProductModule) ListBySupplierID(ctx context.Context, filter helpers.Filter, param SupplierDataParam) (
+	interface{}, *helpers.Error) {
+
+	products, err := models.GetAllProductBySupplierID(ctx, s.db, filter, param.ID)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "ListBySupplierID/GetAllProductBySupplierID",
+			helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	var productResponse []models.ProductResponse
+	for _, product := range products {
+		response, err := product.Response(ctx, s.db, s.logger)
+		if err != nil {
+			return nil, helpers.ErrorWrap(err, s.name, "ListBySupplierID/Response", helpers.InternalServerError,
+				http.StatusInternalServerError)
+		}
+
+		productResponse = append(productResponse, response)
+	}
+
+	return productResponse, nil
+}
+
+func (s ProductModule) ListForCustomer(ctx context.Context, filter helpers.Filter, param ForCustomerParam) (
+	interface{}, *helpers.Error) {
+
+	warehouses, err := models.GetAllWarehouseWithDistance(ctx, s.db, helpers.Filter{
+		FilterOption: helpers.FilterOption{
+			Limit:  1,
+			Offset: 0,
+		},
+		Longitude: param.Longitude,
+		Latitude:  param.Latitude,
+	})
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "ListForCustomer/GetAllWarehouseWithDistance",
+			helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	var warehouseID uuid.UUID
+	for _, warehouse := range warehouses {
+		warehouseID = warehouse.ID
+	}
+	fmt.Println(warehouseID)
+	products, err := models.GetAllProductForCustomer(ctx, s.db, filter, warehouseID)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "ListForCustomer/GetAllProductForCustomer",
+			helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	var productResponse []models.ProductResponse
+	for _, product := range products {
+		response, err := product.Response(ctx, s.db, s.logger)
+		if err != nil {
+			return nil, helpers.ErrorWrap(err, s.name, "ListForCustomer/Response", helpers.InternalServerError,
 				http.StatusInternalServerError)
 		}
 

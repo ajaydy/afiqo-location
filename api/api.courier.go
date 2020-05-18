@@ -104,6 +104,18 @@ func (s CourierModule) Login(ctx context.Context, param CourierLoginParam) (inte
 
 }
 
+func (s CourierModule) Logout(ctx context.Context, session string) (interface{}, *helpers.Error) {
+
+	err := helpers.DeleteCache(ctx, session)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Logout/DeleteCache", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	return nil, nil
+}
+
 func (s CourierModule) PasswordUpdate(ctx context.Context, param PasswordUpdateParam) (interface{}, *helpers.Error) {
 
 	courier, err := models.GetOneCourier(ctx, s.db, param.ID)
@@ -143,7 +155,7 @@ func (s CourierModule) PasswordUpdate(ctx context.Context, param PasswordUpdateP
 	}
 	err = courier.PasswordUpdate(ctx, s.db)
 	if err != nil {
-		return nil, helpers.ErrorWrap(err, s.name, "PasswordUpdate/Update", helpers.InternalServerError,
+		return nil, helpers.ErrorWrap(err, s.name, "PasswordUpdate/PasswordUpdate", helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 

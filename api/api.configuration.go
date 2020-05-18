@@ -33,6 +33,18 @@ func NewConfigurationModule(db *sql.DB, cache *redis.Pool, logger *helpers.Logge
 	}
 }
 
+func (s ConfigurationModule) GetFee(ctx context.Context) (decimal.Decimal, *helpers.Error) {
+
+	fee, err := models.GetConfiguration(ctx, s.db)
+	if err != nil {
+		return decimal.Decimal{}, helpers.ErrorWrap(err, s.name, "GetFee/GetConfiguration", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	return fee.DeliveryFee, nil
+
+}
+
 func (s ConfigurationModule) Update(ctx context.Context, param ConfigurationUpdateParam) (interface{}, *helpers.Error) {
 
 	configuration := models.ConfigurationModel{

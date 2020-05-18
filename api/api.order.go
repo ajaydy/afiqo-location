@@ -5,7 +5,6 @@ import (
 	"afiqo-location/models"
 	"context"
 	"database/sql"
-	"fmt"
 	"github.com/gomodule/redigo/redis"
 	uuid "github.com/satori/go.uuid"
 	"github.com/shopspring/decimal"
@@ -17,6 +16,10 @@ type (
 	Product struct {
 		ID       uuid.UUID `json:"id"`
 		Quantity uint      `json:"quantity"`
+	}
+
+	CustomerDataParam struct {
+		ID uuid.UUID `json:"id"`
 	}
 
 	Distance struct {
@@ -97,6 +100,30 @@ func (s OrderModule) List(ctx context.Context, filter helpers.Filter) (interface
 	return orderResponse, nil
 }
 
+func (s OrderModule) ListByCustomerID(ctx context.Context, filter helpers.Filter, param CustomerDataParam) (
+	interface{}, *helpers.Error) {
+
+	orders, err := models.GetAllOrderByCustomerID(ctx, s.db, filter, param.ID)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "ListByCustomerID/GetAllOrderByCustomerID", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	var orderResponse []models.OrderResponse
+	for _, order := range orders {
+		response, err := order.Response(ctx, s.db, s.logger)
+		if err != nil {
+			return nil, helpers.ErrorWrap(err, s.name, "ListByCustomerID/Response", helpers.InternalServerError,
+				http.StatusInternalServerError)
+		}
+
+		orderResponse = append(orderResponse, response)
+	}
+
+	return orderResponse, nil
+}
+
 func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, *helpers.Error) {
 
 	now := time.Now()
@@ -168,6 +195,10 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 				http.StatusInternalServerError)
 		}
 
+		if subStock < 10 {
+
+		}
+
 		stocks, err := models.GetAllStockByProductID(ctx, s.db, stock.ProductID)
 		if err != nil {
 			return nil, helpers.ErrorWrap(err, s.name, "Add/GetAllStockByProductID", helpers.InternalServerError,
@@ -221,13 +252,7 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 		}
 	}
 
-	orderProducts, err := models.GetAllOrderProduct(ctx, s.db, helpers.Filter{
-		FilterOption: helpers.FilterOption{
-			Limit:  999,
-			Offset: 0,
-		},
-		OrderID: order.ID,
-	})
+	orderProducts, err := models.GetAllOrderProductByOrderID(ctx, s.db, order.ID)
 
 	if err != nil {
 		return nil, helpers.ErrorWrap(err, s.name, "Order/GetAllOrderProduct", helpers.InternalServerError,
@@ -245,8 +270,6 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 			http.StatusInternalServerError)
 	}
 
-	fmt.Println(totalPrice)
-
 	orderUpdate := models.OrderModel{
 		ID:         order.ID,
 		TotalPrice: totalPrice.Add(configuration.DeliveryFee),
@@ -256,8 +279,6 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 		},
 	}
 
-	fmt.Println(orderUpdate.TotalPrice)
-	fmt.Println(order.ID)
 	err = orderUpdate.UpdatePrice(ctx, s.db)
 
 	if err != nil {
@@ -275,6 +296,13 @@ func (s OrderModule) Order(ctx context.Context, param OrderParam) (interface{}, 
 
 	if err != nil {
 		return nil, helpers.ErrorWrap(err, s.name, "Order/payment.Insert", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	order, err = models.GetOneOrder(ctx, s.db, order.ID)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Order/GetOneOrder", helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 

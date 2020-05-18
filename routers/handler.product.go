@@ -21,6 +21,47 @@ func HandlerProductList(w http.ResponseWriter, r *http.Request) (interface{}, *h
 	return productService.List(ctx, filter)
 }
 
+func HandlerProductListBySupplierID(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
+
+	ctx := r.Context()
+
+	filter, err := helpers.ParseFilter(ctx, r)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, "handler", "HandlerProductListBySupplierID/parseFilter",
+			helpers.BadRequestMessage, http.StatusBadRequest)
+	}
+
+	supplierID := uuid.FromStringOrNil(ctx.Value("user_id").(string))
+
+	param := api.SupplierDataParam{ID: supplierID}
+
+	return productService.ListBySupplierID(ctx, filter, param)
+}
+
+func HandlerProductListForCustomer(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
+
+	ctx := r.Context()
+
+	filter, err := helpers.ParseFilter(ctx, r)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, "handler", "HandlerProductListForCustomer/parseFilter",
+			helpers.BadRequestMessage, http.StatusBadRequest)
+	}
+
+	var param api.ForCustomerParam
+
+	err = helpers.ParseBodyRequestData(ctx, r, &param)
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, "handler", "HandlerProductListForCustomer/ParseBodyRequestData",
+			helpers.BadRequestMessage, http.StatusBadRequest)
+
+	}
+
+	return productService.ListForCustomer(ctx, filter, param)
+}
+
 func HandlerProductDetail(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
 
 	ctx := r.Context()

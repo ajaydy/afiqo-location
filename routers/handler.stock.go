@@ -21,6 +21,23 @@ func HandlerStockList(w http.ResponseWriter, r *http.Request) (interface{}, *hel
 	return stockService.List(ctx, filter)
 }
 
+func HandlerStockListBySupplierID(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
+
+	ctx := r.Context()
+
+	filter, err := helpers.ParseFilter(ctx, r)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, "handler", "HandlerStockListBySupplierID/parseFilter",
+			helpers.BadRequestMessage, http.StatusBadRequest)
+	}
+	supplierID := uuid.FromStringOrNil(ctx.Value("user_id").(string))
+
+	param := api.SupplierDataParam{ID: supplierID}
+
+	return stockService.ListBySupplierID(ctx, filter, param)
+}
+
 func HandlerStockDetail(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
 
 	ctx := r.Context()

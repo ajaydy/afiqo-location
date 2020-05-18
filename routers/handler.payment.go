@@ -51,17 +51,7 @@ func HandlerPaymentUpdate(w http.ResponseWriter, r *http.Request) (interface{}, 
 			helpers.BadRequestMessage, http.StatusBadRequest)
 	}
 
-	var param api.PaymentUpdateParam
-
-	err = helpers.ParseBodyRequestData(ctx, r, &param)
-	if err != nil {
-
-		return nil, helpers.ErrorWrap(err, "handler", "HandlerPaymentUpdate/ParseBodyRequestData",
-			helpers.BadRequestMessage, http.StatusBadRequest)
-
-	}
-
-	param.ID = paymentID
+	param := api.PaymentUpdateParam{ID: paymentID}
 
 	return paymentService.Update(ctx, param)
 }

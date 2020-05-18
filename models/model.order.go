@@ -2,6 +2,7 @@ package models
 
 import (
 	"afiqo-location/helpers"
+	"afiqo-location/util"
 	"context"
 	"database/sql"
 	"fmt"
@@ -38,7 +39,7 @@ type (
 		DeliveryAddress  string            `json:"delivery_address"`
 		Latitude         decimal.Decimal   `json:"latitude"`
 		Longitude        decimal.Decimal   `json:"longitude"`
-		Status           int               `json:"status"`
+		Status           string            `json:"status"`
 		TotalPrice       decimal.Decimal   `json:"total_price"`
 		IsDelete         bool              `json:"is_delete"`
 		CreatedBy        uuid.UUID         `json:"created_by"`
@@ -62,6 +63,8 @@ func (s OrderModel) Response(ctx context.Context, db *sql.DB, logger *helpers.Lo
 		return OrderResponse{}, nil
 	}
 
+	status := util.GetOrderStatus(s.Status)
+
 	return OrderResponse{
 		ID:               s.ID,
 		Customer:         customer.Response(),
@@ -70,7 +73,7 @@ func (s OrderModel) Response(ctx context.Context, db *sql.DB, logger *helpers.Lo
 		DeliveryAddress:  s.DeliveryAddress,
 		Longitude:        s.Longitude,
 		Latitude:         s.Latitude,
-		Status:           s.Status,
+		Status:           status,
 		TotalPrice:       s.TotalPrice,
 		IsDelete:         s.IsDelete,
 		CreatedBy:        s.CreatedBy,
@@ -93,13 +96,14 @@ func GetOneOrder(ctx context.Context, db *sql.DB, orderID uuid.UUID) (OrderModel
 			latitude,
 			longitude,
 			status,
-			total_price
+			total_price,
 			is_delete,
 			created_by,
 			created_at,
 			updated_by,
 			updated_at
-		FROM order
+		FROM 
+			"order"
 		WHERE 
 			id = $1
 	`)
@@ -167,12 +171,80 @@ func GetAllOrder(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]Orde
 			created_at,
 			updated_by,
 			updated_at
-		FROM "order"
-		WHERE is_delete = false
+		FROM 
+			"order"
+		WHERE 
+			is_delete = false
 		%s
-		LIMIT $1 OFFSET $2`, filterJoin)
+		LIMIT $1 OFFSET $2`,
+		filterJoin)
 
 	rows, err := db.QueryContext(ctx, query, filter.Limit, filter.Offset)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var orders []OrderModel
+	for rows.Next() {
+		var order OrderModel
+
+		rows.Scan(
+			&order.ID,
+			&order.WarehouseID,
+			&order.CustomerID,
+			&order.DeliveryDatetime,
+			&order.DeliveryAddress,
+			&order.Latitude,
+			&order.Longitude,
+			&order.Status,
+			&order.TotalPrice,
+			&order.IsDelete,
+			&order.CreatedBy,
+			&order.CreatedAt,
+			&order.UpdatedBy,
+			&order.UpdatedAt,
+		)
+
+		orders = append(orders, order)
+	}
+
+	return orders, nil
+
+}
+
+func GetAllOrderByCustomerID(ctx context.Context, db *sql.DB, filter helpers.Filter, customerID uuid.UUID) (
+	[]OrderModel, error) {
+
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			warehouse_id,
+			customer_id,
+			delivery_datetime,
+			delivery_address,
+			latitude,
+			longitude,
+			status,
+			total_price,
+			is_delete,
+			created_by,
+			created_at,
+			updated_by,
+			updated_at
+		FROM 
+			"order"
+		WHERE 
+			is_delete = false
+		AND 
+			customer_id = $1
+		ORDER BY
+			updated_at %s ,created_at %s 
+		LIMIT $2 OFFSET $3`, filter.Dir, filter.Dir)
+
+	rows, err := db.QueryContext(ctx, query, customerID, filter.Limit, filter.Offset)
 
 	if err != nil {
 		return nil, err
@@ -221,10 +293,12 @@ func (s *OrderModel) Insert(ctx context.Context, db *sql.DB) error {
 			status,
 			total_price,
 			created_by,
-			created_at)
-		VALUES(
-		$1,$2,$3,$4,$5,$6,$7,$8,$9,now())
-		RETURNING id, created_at,is_delete`)
+			created_at
+		)VALUES(
+			$1,$2,$3,$4,$5,$6,$7,$8,$9,now())
+		RETURNING 
+			id, created_at,is_delete
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.WarehouseID, s.CustomerID, s.DeliveryDatetime, s.DeliveryAddress, s.Latitude, s.Longitude, s.Status, s.TotalPrice,
@@ -243,13 +317,16 @@ func (s *OrderModel) Insert(ctx context.Context, db *sql.DB) error {
 func (s *OrderModel) UpdateStatus(ctx context.Context, db *sql.DB) error {
 
 	query := fmt.Sprintf(`
-		UPDATE order
+		UPDATE "order"
 		SET
 			status=$1,
 			updated_at=NOW(),
 			updated_by=$2
-		WHERE id=$3
-		RETURNING id,created_at,updated_at,created_by`)
+		WHERE 
+			id=$3
+		RETURNING 
+			id,created_at,updated_at,created_by
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.Status, s.UpdatedBy, s.ID).Scan(
@@ -272,8 +349,11 @@ func (s *OrderModel) UpdatePrice(ctx context.Context, db *sql.DB) error {
 			total_price=$1,
 			updated_at=NOW(),
 			updated_by=$2
-		WHERE id=$3
-		RETURNING id,created_at,updated_at,created_by`)
+		WHERE 
+			id=$3
+		RETURNING 
+			id,created_at,updated_at,created_by
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.TotalPrice, s.UpdatedBy, s.ID).Scan(
@@ -296,7 +376,9 @@ func (s *OrderModel) Delete(ctx context.Context, db *sql.DB) error {
 			is_delete=true,
 			updated_by=$1,
 			updated_at=NOW()
-		WHERE id=$2`)
+		WHERE 
+			id=$2
+	`)
 
 	_, err := db.ExecContext(ctx, query,
 		s.UpdatedBy, s.ID)

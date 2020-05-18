@@ -1,6 +1,9 @@
 package util
 
 import (
+	"afiqo-location/api"
+	"github.com/google/uuid"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -17,11 +20,10 @@ func GetGender(gender int) string {
 	}
 }
 
-//
-//func MeterToKilometer(m int) float64 {
-//	kilometer := float64(m) / 1000
-//	return math.Round(kilometer*100) / 100
-//}
+func MeterToKilometer(m int) float64 {
+	kilometer := float64(m) / 1000
+	return math.Round(kilometer*100) / 100
+}
 
 func count(number int) int {
 	count := 0
@@ -57,17 +59,17 @@ func GetPaymentStatus(status int) string {
 	}
 }
 
-//func GetMinDistance(distances []api.Distance) (float64, uuid.UUID) {
-//	min := distances[0].DistanceValue
-//	id := distances[0].WarehouseID
-//	for _, distance := range distances {
-//		if distance.DistanceValue < min {
-//			min = distance.DistanceValue
-//			id = distance.WarehouseID
-//		}
-//	}
-//	return MeterToKilometer(min), id
-//}
+func GetMinDistance(distances []api.Distance) (float64, uuid.UUID) {
+	min := distances[0].DistanceValue
+	id := distances[0].WarehouseID
+	for _, distance := range distances {
+		if distance.DistanceValue < min {
+			min = distance.DistanceValue
+			id = distance.WarehouseID
+		}
+	}
+	return MeterToKilometer(min), id
+}
 
 func RandomString(n int) string {
 
@@ -84,17 +86,15 @@ func RandomString(n int) string {
 func GetShipmentStatus(status int) string {
 	switch status {
 	case 1:
-		return "Order Received"
-	case 2:
 		return "Order Processing"
-	case 3:
+	case 2:
 		return "Shipped"
-	case 4:
+	case 3:
 		return "Out For Delivery"
-	case 5:
+	case 4:
 		return "Delivered"
 
 	default:
-		return "Order Received"
+		return "Order Processing"
 	}
 }

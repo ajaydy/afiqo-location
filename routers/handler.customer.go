@@ -98,6 +98,13 @@ func HandlerCustomerRegister(w http.ResponseWriter, r *http.Request) (interface{
 	return customerService.Register(ctx, param)
 }
 
+func HandlerCustomerLogout(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
+
+	ctx := r.Context()
+
+	return customerService.Logout(ctx, r.Header.Get("session"))
+}
+
 func HandlerCustomerLogin(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
 
 	ctx := r.Context()

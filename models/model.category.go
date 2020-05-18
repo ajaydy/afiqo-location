@@ -89,7 +89,7 @@ func GetAllCategory(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]C
 	var searchQuery string
 
 	if filter.Search != "" {
-		searchQuery = fmt.Sprintf(`WHERE LOWER(name) LIKE LOWER('%%%s%%')`, filter.Search)
+		searchQuery = fmt.Sprintf(`AND LOWER(name) LIKE LOWER('%%%s%%')`, filter.Search)
 	}
 
 	query := fmt.Sprintf(`
@@ -103,9 +103,13 @@ func GetAllCategory(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]C
 			updated_by,
 			updated_at
 		FROM category
-		%s
-		ORDER BY name  %s
-		LIMIT $1 OFFSET $2`, searchQuery, filter.Dir)
+		WHERE 
+			is_delete = false
+		%s 
+		ORDER BY
+			name  %s
+		LIMIT $1 OFFSET $2`,
+		searchQuery, filter.Dir)
 
 	rows, err := db.QueryContext(ctx, query, filter.Limit, filter.Offset)
 
@@ -144,14 +148,16 @@ func (s *CategoryModel) Insert(ctx context.Context, db *sql.DB) error {
 			name,
 			description,
 			created_by,
-			created_at)
-		VALUES(
-		$1,$2,$3,now())
-		RETURNING id, created_at,is_delete`)
+			created_at
+		)VALUES(
+			$1,$2,$3,now())
+		RETURNING
+			id, created_at
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.Name, s.Description, s.CreatedBy).Scan(
-		&s.ID, &s.CreatedAt, &s.IsDelete,
+		&s.ID, &s.CreatedAt,
 	)
 
 	if err != nil {
@@ -171,8 +177,11 @@ func (s *CategoryModel) Update(ctx context.Context, db *sql.DB) error {
 			description=$2,
 			updated_at=NOW(),
 			updated_by=$3
-		WHERE id=$4
-		RETURNING id,created_at,updated_at,created_by,is_delete`)
+		WHERE 
+			id=$4
+		RETURNING 
+			id,created_at,updated_at,created_by,is_delete
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.Name, s.Description, s.UpdatedBy, s.ID).Scan(
@@ -195,7 +204,9 @@ func (s *CategoryModel) Delete(ctx context.Context, db *sql.DB) error {
 			is_delete=true,
 			updated_by=$1,
 			updated_at=NOW()
-		WHERE id=$2`)
+		WHERE 
+			id=$2
+	`)
 
 	_, err := db.ExecContext(ctx, query,
 		s.UpdatedBy, s.ID)

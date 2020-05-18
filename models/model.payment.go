@@ -2,6 +2,7 @@ package models
 
 import (
 	"afiqo-location/helpers"
+	"afiqo-location/util"
 	"context"
 	"database/sql"
 	"fmt"
@@ -25,7 +26,7 @@ type (
 	PaymentResponse struct {
 		ID        uuid.UUID     `json:"id"`
 		Order     OrderResponse `json:"order"`
-		Status    int           `json:"status"`
+		Status    string        `json:"status"`
 		IsDelete  bool          `json:"is_delete"`
 		CreatedBy uuid.UUID     `json:"created_by"`
 		CreatedAt time.Time     `json:"created_at"`
@@ -48,9 +49,12 @@ func (s PaymentModel) Response(ctx context.Context, db *sql.DB, logger *helpers.
 		return PaymentResponse{}, err
 	}
 
+	status := util.GetPaymentStatus(s.Status)
+
 	return PaymentResponse{
+		ID:        s.ID,
 		Order:     orderResponse,
-		Status:    s.Status,
+		Status:    status,
 		IsDelete:  s.IsDelete,
 		CreatedBy: s.CreatedBy,
 		CreatedAt: s.CreatedAt,
@@ -64,15 +68,16 @@ func GetOnePayment(ctx context.Context, db *sql.DB, paymentID uuid.UUID) (Paymen
 
 	query := fmt.Sprintf(`
 		SELECT
-				id,
-				order_id,
-				status,
-				is_delete,
-				created_by,
-				created_at,
-				updated_by,
-				updated_at
-		FROM payment 
+			id,
+			order_id,
+			status,
+			is_delete,
+			created_by,
+			created_at,
+			updated_by,
+			updated_at
+		FROM 
+			payment 
 		WHERE
 			id = $1
 	`)
@@ -110,9 +115,12 @@ func GetAllPayment(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]Pa
 			created_at,
 			updated_by,
 			updated_at
-		FROM payment
-		ORDER BY order_id  %s
-		LIMIT $1 OFFSET $2`, filter.Dir)
+		FROM 
+			payment
+		ORDER BY 
+			created_at %s
+		LIMIT $1 OFFSET $2`,
+		filter.Dir)
 
 	rows, err := db.QueryContext(ctx, query, filter.Limit, filter.Offset)
 
@@ -153,8 +161,10 @@ func (s *PaymentModel) Insert(ctx context.Context, db *sql.DB) error {
 			created_by,
 			created_at)
 		VALUES(
-		$1,$2,$3,now())
-		RETURNING id, created_at,is_delete`)
+			$1,$2,$3,now())
+		RETURNING 
+			id, created_at,is_delete
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.OrderID, s.Status, s.CreatedBy).Scan(
@@ -174,11 +184,14 @@ func (s *PaymentModel) Update(ctx context.Context, db *sql.DB) error {
 	query := fmt.Sprintf(`
 		UPDATE payment
 		SET
-			status=$1
+			status=$1,
 			updated_at=NOW(),
 			updated_by=$2
-		WHERE id=$3
-		RETURNING id,created_at,updated_at,created_by`)
+		WHERE 
+			id=$3
+		RETURNING 
+			id,created_at,updated_at,created_by
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.Status, s.UpdatedBy, s.ID).Scan(
@@ -201,7 +214,9 @@ func (s *PaymentModel) Delete(ctx context.Context, db *sql.DB) error {
 			is_delete = true,
 			updated_by = $1,
 			updated_at = NOW()
-		WHERE id=$2`)
+		WHERE 
+			id=$2
+	`)
 
 	_, err := db.ExecContext(ctx, query,
 		s.UpdatedBy, s.ID)

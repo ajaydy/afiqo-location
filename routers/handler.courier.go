@@ -97,6 +97,13 @@ func HandlerCourierLogin(w http.ResponseWriter, r *http.Request) (interface{}, *
 	return courierService.Login(ctx, param)
 }
 
+func HandlerCourierLogout(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
+
+	ctx := r.Context()
+
+	return courierService.Logout(ctx, r.Header.Get("session"))
+}
+
 func HandlerCourierDelete(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
 
 	ctx := r.Context()

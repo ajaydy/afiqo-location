@@ -6,21 +6,39 @@ import (
 	"testing"
 )
 
+//remove password
+
 func TestSendEmail(t *testing.T) {
 
 	data := MailData{
-		Name: "Afiq Jamil",
-
-		Actions: []Action{
+		Name: "Afiq",
+		Entry: [][]Entry{
 			{
-				Button: Button{
-					Text: "1626273883",
+				{
+					Key: "Item", Value: "Golang",
+				},
+				{
+					Key: "Description", Value: "Open Source Programming",
+				},
+				{
+					Key: "Price", Value: "13",
+				},
+			},
+			{
+				{
+					Key: "", Value: "Hermes",
+				},
+				{
+					Key: "Description", Value: "Programmatically create beautiful e-mails using Golang.",
+				},
+				{
+					Key: "Price", Value: "$1.99",
 				},
 			},
 		},
 	}
 
-	body, err := data.GenerateForPassword()
+	body, err := data.GenerateForReceipt()
 
 	if err != nil {
 		log.Fatal(err)

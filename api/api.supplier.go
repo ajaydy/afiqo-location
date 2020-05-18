@@ -106,6 +106,18 @@ func (s SupplierModule) Login(ctx context.Context, param SupplierLoginParam) (in
 
 }
 
+func (s SupplierModule) Logout(ctx context.Context, session string) (interface{}, *helpers.Error) {
+
+	err := helpers.DeleteCache(ctx, session)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Logout/DeleteCache", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	return nil, nil
+}
+
 func (s SupplierModule) PasswordUpdate(ctx context.Context, param PasswordUpdateParam) (interface{}, *helpers.Error) {
 
 	supplier, err := models.GetOneSupplier(ctx, s.db, param.ID)

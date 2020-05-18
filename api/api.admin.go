@@ -31,6 +31,9 @@ type (
 		Username string `json:"username" validate:"required"`
 		Password string `json:"password" validate:"required"`
 	}
+
+	AdminLogoutParam struct {
+	}
 )
 
 func NewAdminModule(db *sql.DB, cache *redis.Pool, logger *helpers.Logger) *AdminModule {
@@ -80,6 +83,18 @@ func (s AdminModule) Login(ctx context.Context, param AdminLoginParam) (interfac
 
 }
 
+func (s AdminModule) Logout(ctx context.Context, session string) (interface{}, *helpers.Error) {
+
+	err := helpers.DeleteCache(ctx, session)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Logout/DeleteCache", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	return nil, nil
+}
+
 func (s AdminModule) PasswordUpdate(ctx context.Context, param PasswordUpdateParam) (interface{}, *helpers.Error) {
 
 	admin, err := models.GetOneAdmin(ctx, s.db, param.ID)
@@ -119,7 +134,7 @@ func (s AdminModule) PasswordUpdate(ctx context.Context, param PasswordUpdatePar
 	}
 	err = admin.PasswordUpdate(ctx, s.db)
 	if err != nil {
-		return nil, helpers.ErrorWrap(err, s.name, "PasswordUpdate/Update", helpers.InternalServerError,
+		return nil, helpers.ErrorWrap(err, s.name, "PasswordUpdate/PasswordUpdate", helpers.InternalServerError,
 			http.StatusInternalServerError)
 	}
 

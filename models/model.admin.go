@@ -52,7 +52,8 @@ func GetOneAdmin(ctx context.Context, db *sql.DB, adminID uuid.UUID) (AdminModel
 			created_at,
 			updated_by,
 			updated_at
-		FROM admin
+		FROM 
+			admin
 		WHERE 
 			id = $1
 	`)
@@ -87,7 +88,8 @@ func GetOneAdminByUsername(ctx context.Context, db *sql.DB, username string) (Ad
 			created_at,
 			updated_by,
 			updated_at
-		FROM admin
+		FROM 
+			admin
 		WHERE 
 			username = $1
 	`)
@@ -125,8 +127,10 @@ func (s *AdminModel) PasswordUpdate(ctx context.Context, db *sql.DB) error {
 			password = $1,
 			updated_at=NOW(),
 			updated_by=$2
-		WHERE id=$3
-		RETURNING id,created_at,updated_at,created_by`)
+		WHERE 
+			id=$3
+		RETURNING id,created_at,updated_at,created_by
+	`)
 
 	err = db.QueryRowContext(ctx, query,
 		password, s.UpdatedBy, s.ID).Scan(

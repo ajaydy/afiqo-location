@@ -72,7 +72,8 @@ func GetOneWarehouse(ctx context.Context, db *sql.DB, warehouseID uuid.UUID) (Wa
 			created_at,
 			updated_by,
 			updated_at
-		FROM warehouse
+		FROM 
+			warehouse
 		WHERE 
 			id = $1
 	`)
@@ -118,8 +119,10 @@ func GetAllWarehouseWithDistance(ctx context.Context, db *sql.DB, filter helpers
 			SQRT(
 				POW(69.1 * (latitude::FLOAT8 - $1), 2) +
 				POW(69.1 * ($2 - longitude::FLOAT8) * COS(latitude::FLOAT8 / 57.3), 2)) AS distance  
-		FROM warehouse
-		ORDER BY distance
+		FROM 
+			warehouse
+		ORDER BY 
+			distance
 		LIMIT $3 OFFSET $4`)
 
 	rows, err := db.QueryContext(ctx, query, filter.Latitude, filter.Longitude, filter.Limit, filter.Offset)
@@ -179,10 +182,13 @@ func GetAllWarehouse(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]
 			created_at,
 			updated_by,
 			updated_at
-		FROM warehouse
+		FROM 
+			warehouse
 		%s
-		ORDER BY name  %s
-		LIMIT $1 OFFSET $2`, searchQuery, filter.Dir)
+		ORDER BY 
+			name  %s
+		LIMIT $1 OFFSET $2`,
+		searchQuery, filter.Dir)
 
 	rows, err := db.QueryContext(ctx, query, filter.Limit, filter.Offset)
 
@@ -229,8 +235,10 @@ func (s *WarehouseModel) Insert(ctx context.Context, db *sql.DB) error {
 			created_by,
 			created_at)
 		VALUES(
-		$1,$2,$3,$4,$5,$6,now())
-		RETURNING id, created_at`)
+			$1,$2,$3,$4,$5,$6,now())
+		RETURNING 
+			id, created_at
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.Name, s.Address, s.Latitude, s.Longitude, s.PhoneNo, s.CreatedBy).Scan(
@@ -257,8 +265,11 @@ func (s *WarehouseModel) Update(ctx context.Context, db *sql.DB) error {
 			phone_no=$5,
 			updated_at=NOW(),
 			updated_by=$6
-		WHERE id=$7
-		RETURNING id,created_at,updated_at,created_by`)
+		WHERE 
+			id=$7
+		RETURNING 
+			id,created_at,updated_at,created_by
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.Name, s.Address, s.Latitude, s.Longitude, s.PhoneNo, s.UpdatedBy, s.ID).Scan(
@@ -281,7 +292,9 @@ func (s *WarehouseModel) Delete(ctx context.Context, db *sql.DB) error {
 			is_delete=true,
 			updated_by=$1,
 			updated_at=NOW()
-		WHERE id=$2`)
+		WHERE
+			id=$2
+	`)
 
 	_, err := db.ExecContext(ctx, query,
 		s.UpdatedBy, s.ID)

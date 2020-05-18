@@ -84,17 +84,18 @@ func GetOneOrderProduct(ctx context.Context, db *sql.DB, orderProductID uuid.UUI
 
 	query := fmt.Sprintf(`
 		SELECT
-				id,
-				order_id,
-				product_id,
-				quantity,
-				subtotal,
-				is_delete,
-				created_by,
-				created_at,
-				updated_by,
-				updated_at
-		FROM order_product 
+			id,
+			order_id,
+			product_id,
+			quantity,
+			subtotal,
+			is_delete,
+			created_by,
+			created_at,
+			updated_by,
+			updated_at
+		FROM 
+			order_product 
 		WHERE
 			id = $1
 	`)
@@ -126,21 +127,77 @@ func GetAllOrderProduct(ctx context.Context, db *sql.DB, filter helpers.Filter) 
 
 	query := fmt.Sprintf(`
 		SELECT
-				id,
-				order_id,
-				product_id,
-				quantity,
-				subtotal,
-				is_delete,
-				created_by,
-				created_at,
-				updated_by,
-				updated_at
-		FROM order_product 
-		ORDER BY order_id  %s
-		LIMIT $1 OFFSET $2`, filter.Dir)
+			id,
+			order_id,
+			product_id,
+			quantity,
+			subtotal,
+			is_delete,
+			created_by,
+			created_at,
+			updated_by,
+			updated_at
+		FROM 
+			order_product 
+		ORDER BY 
+			order_id  %s
+		LIMIT $1 OFFSET $2`,
+		filter.Dir)
 
 	rows, err := db.QueryContext(ctx, query, filter.Limit, filter.Offset)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var orderProducts []OrderProductModel
+	for rows.Next() {
+		var orderProduct OrderProductModel
+
+		rows.Scan(
+			&orderProduct.ID,
+			&orderProduct.OrderID,
+			&orderProduct.ProductID,
+			&orderProduct.Quantity,
+			&orderProduct.SubTotal,
+			&orderProduct.IsDelete,
+			&orderProduct.CreatedBy,
+			&orderProduct.CreatedAt,
+			&orderProduct.UpdatedBy,
+			&orderProduct.UpdatedAt,
+		)
+
+		orderProducts = append(orderProducts, orderProduct)
+	}
+
+	return orderProducts, nil
+
+}
+
+func GetAllOrderProductByOrderID(ctx context.Context, db *sql.DB, orderID uuid.UUID) (
+	[]OrderProductModel, error) {
+
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			order_id,
+			product_id,
+			quantity,
+			subtotal,
+			is_delete,
+			created_by,
+			created_at,
+			updated_by,
+			updated_at
+		FROM 
+			order_product 
+		WHERE 
+			order_id = $1
+	`)
+
+	rows, err := db.QueryContext(ctx, query, orderID)
 
 	if err != nil {
 		return nil, err
@@ -183,8 +240,10 @@ func (s *OrderProductModel) Insert(ctx context.Context, db *sql.DB) error {
 			created_by,
 			created_at)
 		VALUES(
-		$1,$2,$3,$4,$5,now())
-		RETURNING id, created_at,is_delete`)
+			$1,$2,$3,$4,$5,now())
+		RETURNING 
+			id, created_at,is_delete
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.OrderID, s.ProductID, s.Quantity, s.SubTotal, s.CreatedBy).Scan(
@@ -207,7 +266,9 @@ func (s *OrderProductModel) Delete(ctx context.Context, db *sql.DB) error {
 			is_delete = true,
 			updated_by = $1,
 			updated_at = NOW()
-		WHERE id=$2`)
+		WHERE 
+			id=$2
+	`)
 
 	_, err := db.ExecContext(ctx, query,
 		s.UpdatedBy, s.ID)

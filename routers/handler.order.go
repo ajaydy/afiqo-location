@@ -21,6 +21,24 @@ func HandlerOrderList(w http.ResponseWriter, r *http.Request) (interface{}, *hel
 	return orderService.List(ctx, filter)
 }
 
+func HandlerOrderListByCustomerID(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
+
+	ctx := r.Context()
+
+	filter, err := helpers.ParseFilter(ctx, r)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, "handler", "HandlerOrderListByCustomerID/parseFilter",
+			helpers.BadRequestMessage, http.StatusBadRequest)
+	}
+
+	customerID := uuid.FromStringOrNil(ctx.Value("user_id").(string))
+
+	param := api.CustomerDataParam{ID: customerID}
+
+	return orderService.ListByCustomerID(ctx, filter, param)
+}
+
 func HandlerOrderDetail(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
 
 	ctx := r.Context()

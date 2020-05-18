@@ -41,6 +41,19 @@ func InitHandlers() *mux.Router {
 	apiV1 := r.PathPrefix("/api/v1").Subrouter()
 	apiV1.Use(middleware.LoggingMiddleware)
 
+	apiV1.Handle("/courier/shipments", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerShipmentListByCourierID), session.COURIER_ROLE))).Methods(http.MethodGet)
+	apiV1.Handle("/customer/shipments", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerShipmentListByCustomerID), session.CUSTOMER_ROLE))).Methods(http.MethodGet)
+	apiV1.Handle("/customer/orders", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerOrderListByCustomerID), session.CUSTOMER_ROLE))).Methods(http.MethodGet)
+	apiV1.Handle("/customer/products", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerProductListForCustomer), session.CUSTOMER_ROLE))).Methods(http.MethodPost)
+	apiV1.Handle("/supplier/products", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerProductListBySupplierID), session.SUPPLIER_ROLE))).Methods(http.MethodGet)
+	apiV1.Handle("/supplier/stocks", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerStockListBySupplierID), session.SUPPLIER_ROLE))).Methods(http.MethodGet)
+
 	apiV1.Handle("/customers", middleware.SessionMiddleware(
 		HandlerFunc(HandlerCustomerList))).Methods(http.MethodGet)
 	apiV1.Handle("/customers/{id}", middleware.SessionMiddleware(
@@ -52,6 +65,8 @@ func InitHandlers() *mux.Router {
 	apiV1.Handle("/customer/password-update", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerCustomerPasswordUpdate), session.CUSTOMER_ROLE))).Methods(http.MethodPut)
 	apiV1.Handle("/customer/login", HandlerFunc(HandlerCustomerLogin)).Methods(http.MethodPost)
+	apiV1.Handle("/customer/logout", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerCustomerLogout), session.CUSTOMER_ROLE))).Methods(http.MethodPost)
 	apiV1.Handle("/customer/register", HandlerFunc(HandlerCustomerRegister)).Methods(http.MethodPost)
 
 	apiV1.Handle("/suppliers", middleware.SessionMiddleware(
@@ -67,6 +82,8 @@ func InitHandlers() *mux.Router {
 	apiV1.Handle("/suppliers/password-update", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerSupplierPasswordUpdate), session.SUPPLIER_ROLE))).Methods(http.MethodPut)
 	apiV1.Handle("/supplier/login", HandlerFunc(HandlerSupplierLogin)).Methods(http.MethodPost)
+	apiV1.Handle("/supplier/logout", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerSupplierLogout), session.SUPPLIER_ROLE))).Methods(http.MethodPost)
 
 	apiV1.Handle("/couriers", middleware.SessionMiddleware(
 		HandlerFunc(HandlerCourierList))).Methods(http.MethodGet)
@@ -81,6 +98,8 @@ func InitHandlers() *mux.Router {
 	apiV1.Handle("/courier/password-update", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerCourierPasswordUpdate), session.COURIER_ROLE))).Methods(http.MethodPut)
 	apiV1.Handle("/courier/login", HandlerFunc(HandlerCourierLogin)).Methods(http.MethodPost)
+	apiV1.Handle("/courier/logout", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerCourierLogout), session.COURIER_ROLE))).Methods(http.MethodPost)
 
 	apiV1.Handle("/categories", middleware.SessionMiddleware(
 		HandlerFunc(HandlerCategoryList))).Methods(http.MethodGet)
@@ -159,6 +178,8 @@ func InitHandlers() *mux.Router {
 	apiV1.Handle("/admin/password-update", middleware.SessionMiddleware(middleware.RolesMiddleware(
 		HandlerFunc(HandlerAdminPasswordUpdate), session.ADMIN_ROLE))).Methods(http.MethodPut)
 	apiV1.Handle("/admin/login", HandlerFunc(HandlerAdminLogin)).Methods(http.MethodPost)
+	apiV1.Handle("/admin/logout", middleware.SessionMiddleware(middleware.RolesMiddleware(
+		HandlerFunc(HandlerAdminLogout), session.ADMIN_ROLE))).Methods(http.MethodPost)
 
 	return r
 }

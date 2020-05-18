@@ -86,6 +86,13 @@ func HandlerSupplierLogin(w http.ResponseWriter, r *http.Request) (interface{}, 
 	return supplierService.Login(ctx, param)
 }
 
+func HandlerSupplierLogout(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
+
+	ctx := r.Context()
+
+	return supplierService.Logout(ctx, r.Header.Get("session"))
+}
+
 func HandlerSupplierDelete(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
 
 	ctx := r.Context()

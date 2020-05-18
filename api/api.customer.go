@@ -167,6 +167,18 @@ func (s CustomerModule) Login(ctx context.Context, param CustomerLoginParam) (in
 
 }
 
+func (s CustomerModule) Logout(ctx context.Context, session string) (interface{}, *helpers.Error) {
+
+	err := helpers.DeleteCache(ctx, session)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "Logout/DeleteCache", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	return nil, nil
+}
+
 func (s CustomerModule) PasswordUpdate(ctx context.Context, param PasswordUpdateParam) (interface{}, *helpers.Error) {
 
 	customer, err := models.GetOneCustomer(ctx, s.db, param.ID)

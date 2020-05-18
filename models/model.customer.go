@@ -83,7 +83,8 @@ func GetOneCustomer(ctx context.Context, db *sql.DB, customerID uuid.UUID) (Cust
 			created_at,
 			updated_by,
 			updated_at
-		FROM customer
+		FROM 
+			customer
 		WHERE 
 			id = $1
 	`)
@@ -136,10 +137,13 @@ func GetAllCustomer(ctx context.Context, db *sql.DB, filter helpers.Filter) ([]C
 			created_at,
 			updated_by,
 			updated_at
-		FROM customer
+		FROM 
+			customer
 		%s
-		ORDER BY name  %s
-		LIMIT $1 OFFSET $2`, searchQuery, filter.Dir)
+		ORDER BY
+			name  %s
+		LIMIT $1 OFFSET $2`,
+		searchQuery, filter.Dir)
 
 	rows, err := db.QueryContext(ctx, query, filter.Limit, filter.Offset)
 
@@ -193,9 +197,12 @@ func GetOneCustomerByEmail(ctx context.Context, db *sql.DB, email string) (Custo
 			created_at,
 			updated_by,
 			updated_at
-		FROM customer
+		FROM 
+			customer
 		WHERE 
-			is_active = true AND email = $1 
+			is_active = true
+		AND 
+			email = $1 
 	`)
 
 	var customer CustomerModel
@@ -241,10 +248,12 @@ func (s *CustomerModel) Insert(ctx context.Context, db *sql.DB) error {
 			password,
 			phone_no,
 			created_by,
-			created_at)
-		VALUES(
-		$1,$2,$3,$4,$5,$6,$7,$8,now())
-		RETURNING id, created_at,is_active`)
+			created_at
+		)VALUES(
+			$1,$2,$3,$4,$5,$6,$7,$8,now())
+		RETURNING
+			id, created_at,is_active
+	`)
 
 	err = db.QueryRowContext(ctx, query,
 		s.Name, s.Address, s.DateOfBirth, s.Gender, s.Email, password, s.PhoneNo, s.CreatedBy).Scan(
@@ -271,8 +280,11 @@ func (s *CustomerModel) Update(ctx context.Context, db *sql.DB) error {
 			phone_no=$5,
 			updated_at=NOW(),
 			updated_by=$6
-		WHERE id=$7
-		RETURNING id,created_at,updated_at,created_by,is_active,email`)
+		WHERE 
+			id=$7
+		RETURNING
+			id,created_at,updated_at,created_by,is_active,email
+	`)
 
 	err := db.QueryRowContext(ctx, query,
 		s.Name, s.Address, s.DateOfBirth, s.Gender, s.PhoneNo, s.UpdatedBy, s.ID).Scan(
@@ -301,8 +313,11 @@ func (s *CustomerModel) PasswordUpdate(ctx context.Context, db *sql.DB) error {
 			password = $1,
 			updated_at=NOW(),
 			updated_by=$2
-		WHERE id=$3
-		RETURNING id,created_at,updated_at,created_by,is_active`)
+		WHERE 
+			id=$3
+		RETURNING 
+			id,created_at,updated_at,created_by,is_active	
+	`)
 
 	err = db.QueryRowContext(ctx, query,
 		password, s.UpdatedBy, s.ID).Scan(
@@ -325,7 +340,9 @@ func (s *CustomerModel) Delete(ctx context.Context, db *sql.DB) error {
 			is_active=false,
 			updated_by=$1,
 			updated_at=NOW()
-		WHERE id=$2`)
+		WHERE 
+			id=$2
+	`)
 
 	_, err := db.ExecContext(ctx, query,
 		s.UpdatedBy, s.ID)

@@ -55,8 +55,9 @@ func GetConfiguration(ctx context.Context, db *sql.DB) (ConfigurationModel, erro
 			created_at,
 			updated_by,
 			updated_at
-		FROM configuration
-		`)
+		FROM 
+			configuration
+	`)
 
 	var configuration ConfigurationModel
 	err := db.QueryRowContext(ctx, query).Scan(

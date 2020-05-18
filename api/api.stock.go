@@ -86,6 +86,30 @@ func (s StockModule) List(ctx context.Context, filter helpers.Filter) (interface
 	return stockResponses, nil
 }
 
+func (s StockModule) ListBySupplierID(ctx context.Context, filter helpers.Filter, param SupplierDataParam) (
+	interface{}, *helpers.Error) {
+
+	stocks, err := models.GetAllStockBySupplierID(ctx, s.db, filter, param.ID)
+
+	if err != nil {
+		return nil, helpers.ErrorWrap(err, s.name, "ListBySupplierID/GetAllStock", helpers.InternalServerError,
+			http.StatusInternalServerError)
+	}
+
+	var stockResponses []models.StockResponse
+	for _, stock := range stocks {
+		response, err := stock.Response(ctx, s.db, s.logger)
+		if err != nil {
+			return nil, helpers.ErrorWrap(err, s.name, "ListBySupplierID/Response", helpers.InternalServerError,
+				http.StatusInternalServerError)
+		}
+
+		stockResponses = append(stockResponses, response)
+	}
+
+	return stockResponses, nil
+}
+
 func (s StockModule) Add(ctx context.Context, param StockAddParam) (interface{}, *helpers.Error) {
 
 	stock := models.StockModel{

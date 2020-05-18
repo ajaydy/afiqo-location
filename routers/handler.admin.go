@@ -22,6 +22,13 @@ func HandlerAdminLogin(w http.ResponseWriter, r *http.Request) (interface{}, *he
 	return adminService.Login(ctx, param)
 }
 
+func HandlerAdminLogout(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
+
+	ctx := r.Context()
+
+	return adminService.Logout(ctx, r.Header.Get("session"))
+}
+
 func HandlerAdminPasswordUpdate(w http.ResponseWriter, r *http.Request) (interface{}, *helpers.Error) {
 
 	ctx := r.Context()
